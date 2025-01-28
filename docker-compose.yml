@@ -1,0 +1,40 @@
+﻿version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: CommentSystem/Dockerfile
+    ports:
+      - "5000:5000" # HTTP порт
+      - "5001:5001" # HTTPS порт
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=db;Database=CommentSystemDB;User Id=CommentSystemAdmin;Password=CommentSystem!2025;TrustServerCertificate=True      
+      - ConnectionStrings__Redis=redis:6379
+    depends_on:
+      - db
+      - redis
+    restart: always
+
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sql_server
+    ports:
+      - "1433:1433"
+    environment:
+      SA_PASSWORD: "CommentSystem!2025"
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+    volumes:
+      - mssql_data:/var/opt/mssql
+    restart: always
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    command: ["redis-server"]
+    restart: always
+
+volumes:
+  mssql_data:
