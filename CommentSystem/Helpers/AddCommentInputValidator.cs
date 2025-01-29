@@ -1,8 +1,8 @@
-﻿using CommentSystem.GraphQL.Inputs;
-using CommentSystem.Helpers;
+﻿using CommentSystem.Helpers;
+using CommentSystem.Models.Inputs;
 using FluentValidation;
 
-public class AddCommentInputValidator : AbstractValidator<AddCommentInput>
+public class AddCommentInputValidator : AbstractValidator<CommentDto>
 {
     public AddCommentInputValidator()
     {

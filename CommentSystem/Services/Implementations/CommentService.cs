@@ -5,7 +5,7 @@ using CommentSystem.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using System.Text.Json;
-using CommentSystem.GraphQL.Inputs;
+using CommentSystem.Models.Inputs;
 
 namespace CommentSystem.Services.Implementations
 {
@@ -13,11 +13,14 @@ namespace CommentSystem.Services.Implementations
     {
         private readonly ICommentRepository _commentRepository;
         private readonly IDistributedCache _cache;
+        private readonly CaptchaValidator _captchaValidator;
 
-        public CommentService(ICommentRepository commentRepository, IDistributedCache cache)
+        public CommentService(ICommentRepository commentRepository, IDistributedCache cache, CaptchaValidator captchaValidator)
         {
             _commentRepository = commentRepository;
+
             _cache = cache;
+            _captchaValidator = captchaValidator;
         }
 
         public async Task<List<Comment>> GetAllCommentsWithSortingAndPaginationAsync(string? sortBy, bool descending, int page, int pageSize)
@@ -53,15 +56,9 @@ namespace CommentSystem.Services.Implementations
             return commentList;
         }        
 
-        public async Task<Comment> AddCommentAsync(AddCommentInput input)
+        public async Task AddCommentAsync(CommentDto input)
         {
-            // TODO: Validate CAPTCHA
-            if (input.Captcha != "valid")
-            {
-                throw new Exception("Invalid CAPTCHA");
-            }                        
-
-            var newComment = new Comment
+            var comment = new Comment
             {
                 User = new User
                 {
@@ -72,11 +69,7 @@ namespace CommentSystem.Services.Implementations
                 Text = input.Text
             };
 
-            await _commentRepository.AddAsync(newComment);
-
-            await _cache.RemoveAsync("comments_all");
-
-            return newComment;
-        }        
+            await _commentRepository.AddAsync(comment);
+        }
     }
 }

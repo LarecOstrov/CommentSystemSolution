@@ -12,9 +12,11 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Server=db;Database=CommentSystemDB;User Id=CommentSystemAdmin;Password=CommentSystem!2025;TrustServerCertificate=True      
       - ConnectionStrings__Redis=redis:6379
+      - ConnectionStrings__RabbitMQ=amqp://CommentSystemAdmin:CommentSystem!2025@rabbitmq:5672
     depends_on:
       - db
       - redis
+      - rabbitmq
     restart: always
 
   db:
@@ -29,12 +31,35 @@ services:
     volumes:
       - mssql_data:/var/opt/mssql
     restart: always
+
   redis:
     image: redis:latest
+    container_name: redis_cache
     ports:
       - "6379:6379"
     command: ["redis-server"]
     restart: always
 
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq_server
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"   # AMQP (для .NET)
+      - "15672:15672" # Web UI
+    environment:
+      RABBITMQ_DEFAULT_USER: CommentSystemAdmin
+      RABBITMQ_DEFAULT_PASS: CommentSystem!2025
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    restart: always
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+      timeout: 5s
+
 volumes:
   mssql_data:
+  rabbitmq_data:
