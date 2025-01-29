@@ -1,23 +1,32 @@
 ﻿using CommentSystem.Models;
 using CommentSystem.Data;
 using CommentSystem.Services.Interfaces;
-using CommentSystem.GraphQL.Inputs;
+using CommentSystem.Messaging.Interfaces;
+using CommentSystem.Models.Inputs;
+using CommentSystem.Helpers;
 
 namespace CommentSystem.GraphQL
 {
     public class Mutation
     {
-        private readonly ICommentService _commentService;
+        private readonly IRabbitMqProducer _rabbitMqProducer;
+        private readonly CaptchaValidator _captchaValidator;
 
-        public Mutation(ICommentService commentService)
+        public Mutation(IRabbitMqProducer rabbitMqProducer, CaptchaValidator captchaValidator)
         {
-            _commentService = commentService;
+            _rabbitMqProducer = rabbitMqProducer;
+            _captchaValidator = captchaValidator;
         }
 
-        
-        public async Task<Comment> AddComment(AddCommentInput input)
+        public async Task<string> AddComment(CommentDto input)
         {
-            return await _commentService.AddCommentAsync(input);
-        }        
+            if (!await _captchaValidator.ValidateCaptchaAsync(input.Captcha))
+            {
+                throw new Exception("Invalid CAPTCHA");
+            }
+
+            _rabbitMqProducer.Publish("comments_queue", input);
+            return "Comment is being processed";
+        }
     }
 }

@@ -1,16 +1,22 @@
-using Microsoft.EntityFrameworkCore;
 using CommentSystem.Data;
-using CommentSystem.Services.Interfaces;
-using CommentSystem.Services.Implementations;
-using CommentSystem.Repositories.Interfaces;
-using CommentSystem.Repositories.Implementations;
 using CommentSystem.GraphQL;
-using Serilog;
+using CommentSystem.Messaging.Consumers;
+using CommentSystem.Messaging.Interfaces;
+using CommentSystem.Messaging.Producers;
 using CommentSystem.Middleware;
-using Microsoft.AspNetCore.HttpOverrides;
-using Prometheus;
-using CommentSystem.GraphQL.Inputs;
+using CommentSystem.Repositories.Implementations;
+using CommentSystem.Repositories.Interfaces;
+using CommentSystem.Services.Implementations;
+using CommentSystem.Services.Interfaces;
+using CommentSystem.WebSockets;
 using FluentValidation;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.EntityFrameworkCore;
+using Prometheus;
+using RabbitMQ.Client;
+using Serilog;
+using CommentSystem.Helpers;
+using CommentSystem.Models.Inputs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,15 +29,36 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
-// Add services to the container.
-builder.Services
-    .AddDbContext<ApplicationDbContext>(options =>
+// MSSQL
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// RabbitMQ
+var rabbitMqConfig = builder.Configuration.GetSection("RabbitMQ");
+var factory = new ConnectionFactory
+{
+    HostName = rabbitMqConfig["HostName"],
+    UserName = rabbitMqConfig["UserName"],
+    Password = rabbitMqConfig["Password"],
+    Port = int.Parse(rabbitMqConfig["Port"])
+};
+
+// Rabbit connection
+var rabbitConnection = await factory.CreateConnectionAsync();
+builder.Services.AddSingleton<IConnection>(rabbitConnection);
+builder.Services.AddSingleton<IRabbitMqProducer, RabbitMqProducer>();
+builder.Services.AddHostedService<RabbitMqConsumer>();
+
+// Repositories
 builder.Services.AddScoped<ICommentRepository, CommentRepository>();
+
+//Services
 builder.Services.AddScoped<ICommentService, CommentService>();
-builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+
+// Helpers
+builder.Services.AddHttpClient<CaptchaValidator>();
+
+// GraphQL
 builder.Services
     .AddGraphQLServer()
     .AddQueryType<Query>()
@@ -40,13 +67,16 @@ builder.Services
     .AddSorting()
     .AddInstrumentation();
 builder.Services.AddValidation();
-builder.Services.AddSingleton<IValidator<AddCommentInput>, AddCommentInputValidator>();
+builder.Services.AddSingleton<IValidator<CommentDto>, AddCommentInputValidator>();
+
+// Redis
 builder.Services.AddStackExchangeRedisCache(options =>
 {
     options.Configuration = builder.Configuration.GetConnectionString("Redis");
     options.InstanceName = "CommentSystem_";
 });
 
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
@@ -56,25 +86,20 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 });
 app.UseMiddleware<RequestLoggingMiddleware>();
 
-using var scope = app.Services.CreateScope();
-var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-dbContext.Database.Migrate();
-
-// ?????????? ?????? HTTP
-app.UseHttpMetrics();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Auto-Migration DB for DEV
+using (var scope = app.Services.CreateScope())
 {
-    app.MapOpenApi();
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    dbContext.Database.Migrate();
 }
 
-app.UseHttpsRedirection();
 
+app.UseHttpMetrics();
+app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthorization();
-app.MapGraphQL(); 
+app.MapHub<WebSocketHub>("/ws"); //WebSocket
+app.MapGraphQL();
 app.MapMetrics(); // Prometheus
-//app.MapControllers();
 
 app.Run();
