@@ -11,6 +11,9 @@ namespace CommentSystem.Models
         [MaxLength(500)]
         public required string Text { get; set; }
 
+        public string? ImageUrl { get; set; }
+        public string? TextUrl { get; set; }
+
         public Guid? ParentId { get; set; }
 
         [ForeignKey("ParentId")]

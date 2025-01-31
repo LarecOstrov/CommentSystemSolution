@@ -2,7 +2,7 @@
 using CommentSystem.Models.Inputs;
 using FluentValidation;
 
-public class AddCommentInputValidator : AbstractValidator<CommentDto>
+public class AddCommentInputValidator : AbstractValidator<AddCommentInput>
 {
     public AddCommentInputValidator()
     {

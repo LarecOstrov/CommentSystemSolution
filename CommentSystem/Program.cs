@@ -54,9 +54,10 @@ builder.Services.AddScoped<ICommentRepository, CommentRepository>();
 
 //Services
 builder.Services.AddScoped<ICommentService, CommentService>();
+builder.Services.AddScoped<IRemoteCaptchaService, RemoteCaptchaService>();
+builder.Services.AddHttpClient<IFileServiceApiClient, FileServiceApiClient>();
 
 // Helpers
-builder.Services.AddHttpClient<CaptchaValidator>();
 
 // GraphQL
 builder.Services
@@ -67,7 +68,7 @@ builder.Services
     .AddSorting()
     .AddInstrumentation();
 builder.Services.AddValidation();
-builder.Services.AddSingleton<IValidator<CommentDto>, AddCommentInputValidator>();
+builder.Services.AddScoped<IValidator<AddCommentInput>, AddCommentInputValidator>();
 
 // Redis
 builder.Services.AddStackExchangeRedisCache(options =>
@@ -92,7 +93,6 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     dbContext.Database.Migrate();
 }
-
 
 app.UseHttpMetrics();
 app.UseHttpsRedirection();

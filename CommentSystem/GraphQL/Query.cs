@@ -1,6 +1,6 @@
 ﻿using CommentSystem.Models;
-using CommentSystem.Data;
 using CommentSystem.Services.Interfaces;
+using Serilog;
 
 namespace CommentSystem.GraphQL
 {
@@ -12,14 +12,18 @@ namespace CommentSystem.GraphQL
         {
             _commentService = commentService;
         }
-        
-        public async Task<List<Comment>> GetComments(
-            string? sortBy = null,
-            bool descending = true,
-            int page = 1,
-            int pageSize = 25)
+
+        public async Task<List<Comment>> GetComments(string? sortBy = null, bool descending = true, int page = 1, int pageSize = 25)
         {
-            return await _commentService.GetAllCommentsWithSortingAndPaginationAsync(sortBy, descending, page, pageSize);
-        }        
+            try
+            {
+                return await _commentService.GetAllCommentsWithSortingAndPaginationAsync(sortBy, descending, page, pageSize);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, $"Error while getting comments: sortBy - {sortBy}, descending - {descending}, page - {page}, pageSize - {pageSize}");
+                return new List<Comment>();
+            }
+        }
     }
 }

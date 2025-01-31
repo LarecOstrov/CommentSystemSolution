@@ -5,7 +5,8 @@ using CommentSystem.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using System.Text.Json;
-using CommentSystem.Models.Inputs;
+using CommentSystem.Models.DTOs;
+using Serilog;
 
 namespace CommentSystem.Services.Implementations
 {
@@ -54,22 +55,31 @@ namespace CommentSystem.Services.Implementations
             });
 
             return commentList;
-        }        
+        }
 
         public async Task AddCommentAsync(CommentDto input)
         {
-            var comment = new Comment
+            try
             {
-                User = new User
+                var comment = new Comment
                 {
-                    UserName = input.UserName,
-                    Email = input.Email,
-                    HomePage = input.HomePage
-                },
-                Text = input.Text
-            };
+                    User = new User
+                    {
+                        UserName = input.UserName,
+                        Email = input.Email,
+                        HomePage = input.HomePage
+                    },
+                    Text = input.Text,
+                    ImageUrl = input.ImageUrl,
+                    TextUrl = input.TextUrl
+                };
 
-            await _commentRepository.AddAsync(comment);
+                await _commentRepository.AddAsync(comment);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error while adding comment");
+            }
         }
     }
 }

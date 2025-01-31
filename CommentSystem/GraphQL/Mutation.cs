@@ -1,32 +1,63 @@
-﻿using CommentSystem.Models;
-using CommentSystem.Data;
-using CommentSystem.Services.Interfaces;
-using CommentSystem.Messaging.Interfaces;
+﻿using CommentSystem.Messaging.Interfaces;
+using CommentSystem.Models.DTOs;
 using CommentSystem.Models.Inputs;
-using CommentSystem.Helpers;
+using CommentSystem.Services.Interfaces;
+using FluentValidation;
+using FluentValidation.Results;
+using Serilog;
+using System.Linq;
 
 namespace CommentSystem.GraphQL
 {
     public class Mutation
     {
         private readonly IRabbitMqProducer _rabbitMqProducer;
-        private readonly CaptchaValidator _captchaValidator;
+        private readonly IRemoteCaptchaService _remoteCaptchaService;
+        private readonly IFileServiceApiClient _fileServiceApiClient;
+        private readonly IValidator<AddCommentInput> _validator;
 
-        public Mutation(IRabbitMqProducer rabbitMqProducer, CaptchaValidator captchaValidator)
+        public Mutation(IRabbitMqProducer rabbitMqProducer, IRemoteCaptchaService remoteCaptchaService, IFileServiceApiClient fileServiceApiClient, IValidator<AddCommentInput> validator)
         {
             _rabbitMqProducer = rabbitMqProducer;
-            _captchaValidator = captchaValidator;
+            _remoteCaptchaService = remoteCaptchaService;
+            _fileServiceApiClient = fileServiceApiClient;
+            _validator = validator;
         }
 
-        public async Task<string> AddComment(CommentDto input)
+        public async Task<string> AddComment(AddCommentInput input)
         {
-            if (!await _captchaValidator.ValidateCaptchaAsync(input.Captcha))
+            try
             {
-                throw new Exception("Invalid CAPTCHA");
-            }
+                ValidationResult validationResult = await _validator.ValidateAsync(input);
 
-            _rabbitMqProducer.Publish("comments_queue", input);
-            return "Comment is being processed";
+                if (!validationResult.IsValid)
+                {
+                    throw new GraphQLException(string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage)));
+                }
+
+                if (!await _remoteCaptchaService.ValidateCaptchaAsync(input.CaptchaKey, input.Captcha))
+                {
+                    throw new GraphQLException("Invalid CAPTCHA");
+                }
+
+                var commentData = new CommentDto
+                {
+                    UserName = input.UserName,
+                    Email = input.Email,
+                    HomePage = input.HomePage,
+                    Text = input.Text,
+                    ImageUrl = input.ImageUrl,
+                    TextUrl = input.TextUrl
+                };
+
+                await _rabbitMqProducer.Publish("comments_queue", commentData);
+                return "Comment is being processed";
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error while adding comment");
+                throw new GraphQLException("Internal server error");
+            }
         }
     }
 }

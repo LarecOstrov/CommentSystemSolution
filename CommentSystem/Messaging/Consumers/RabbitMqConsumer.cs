@@ -3,7 +3,11 @@ using System.Text.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using CommentSystem.Services.Interfaces;
-using CommentSystem.Models.Inputs;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.SignalR;
+using CommentSystem.WebSockets;
+using CommentSystem.Models.DTOs;
 
 namespace CommentSystem.Messaging.Consumers
 {
@@ -32,9 +36,9 @@ namespace CommentSystem.Messaging.Consumers
                 var commentData = JsonSerializer.Deserialize<CommentDto>(message);
 
                 using var scope = _serviceProvider.CreateScope();
-                var commentService = scope.ServiceProvider.GetRequiredService<ICommentService>();
+                var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<WebSocketHub>>();
                 
-                await commentService.AddCommentAsync(commentData);
+                await hubContext.Clients.All.SendAsync("ReceiveComment", commentData.UserName, commentData.Text);
             };
 
             Task.Run(() => _channel.BasicConsumeAsync(_queueName, autoAck: true, consumer)).GetAwaiter().GetResult();
@@ -50,3 +54,7 @@ namespace CommentSystem.Messaging.Consumers
         }
     }
 }
+
+
+
+

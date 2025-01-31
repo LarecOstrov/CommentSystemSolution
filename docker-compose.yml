@@ -17,6 +17,7 @@ services:
       - db
       - redis
       - rabbitmq
+      - captcha_service
     restart: always
 
   db:
@@ -59,6 +60,28 @@ services:
       retries: 5
       start_period: 10s
       timeout: 5s
+
+  captcha_service:
+    build:
+      context: ./CaptchaServiceAPI
+      dockerfile: Dockerfile
+    ports:
+      - "5002:5002"
+    environment:
+      - ConnectionStrings__Redis=redis:6379
+    depends_on:
+      - redis
+    restart: always
+    
+  fileapi:
+    build:
+      context: ./FileServiceAPI
+      dockerfile: Dockerfile
+    ports:
+      - "5003:5003"
+    environment:
+      - AzureBlobStorage__ConnectionString=DefaultEndpointsProtocol=https;AccountName=commentsystemstorage;AccountKey=3VXV9erOiP7q57DuRFXvE8jOtuX9TPVm2HK/fVCbfcNGcw8p5mI79DYPyQouRKRf/GIKzKYVw5qT+AStHUlQjQ==;EndpointSuffix=core.windows.net
+      - AzureBlobStorage__ContainerName=comment-files
 
 volumes:
   mssql_data:

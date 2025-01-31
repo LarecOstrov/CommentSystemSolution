@@ -1,5 +1,5 @@
 ﻿using CommentSystem.Models;
-using CommentSystem.Models.Inputs;
+using CommentSystem.Models.DTOs;
 
 namespace CommentSystem.Services.Interfaces
 {
