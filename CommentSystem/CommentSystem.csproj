@@ -45,4 +45,8 @@
     <Folder Include="Migrations\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\CommonMiddleware\Common.csproj" />
+  </ItemGroup>
+
 </Project>

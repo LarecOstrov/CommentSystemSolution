@@ -1,8 +1,11 @@
 ﻿using System.Drawing;
 using System.Drawing.Imaging;
 using Azure.Storage.Blobs;
-using CommentSystem.Services.Interfaces;
+using FileServiceAPI.Services.Interfaces;
+using FileServiceAPI.Config;
 using Serilog;
+using Microsoft.Extensions.Options;
+using Azure.Storage.Blobs.Models;
 
 namespace FileServiceAPI.Services
 {
@@ -15,101 +18,136 @@ namespace FileServiceAPI.Services
         private readonly int _maxTextFileSize;
         private readonly int _maxImageWidth;
         private readonly int _maxImageHeight;
+        private readonly AppOptions _options;
+        private readonly Dictionary<string, string> _allowedMimeTypes;
 
-        public AzureBlobService(IConfiguration configuration)
+
+        public AzureBlobService(IOptions<AppOptions> options)
         {
-            _blobServiceClient = new BlobServiceClient(configuration["AzureBlobStorage:ConnectionString"]);
-            _containerName = configuration["AzureBlobStorage:ContainerName"];
-            _allowedImageExtensions = configuration.GetSection("FileUploadSettings:AllowedImageExtensions").Get<List<string>>() ?? new List<string>{ ".jpg", ".jpeg", ".png", ".gif" };
-            _allowedTextExtension = configuration["FileUploadSettings:AllowedTextExtension"] ?? ".txt";
-            _maxTextFileSize = configuration.GetValue<int?>("FileUploadSettings:MaxTextFileSize") ?? 102400;
-            _maxImageWidth = configuration.GetValue<int?>("FileUploadSettings:MaxImageWidth") ?? 320;
-            _maxImageHeight = configuration.GetValue<int?>("FileUploadSettings:MaxImageHeight") ?? 240;
-        }
+            _options = options.Value;
+            _blobServiceClient = new BlobServiceClient(_options.AzureBlobStorage.ConnectionString);
+            _containerName = _options.AzureBlobStorage.ContainerName;
+            _allowedImageExtensions = _options.FileUploadSettings.AllowedImageExtensions;
+            _allowedTextExtension = _options.FileUploadSettings.AllowedTextExtension;
+            _maxTextFileSize = _options.FileUploadSettings.MaxTextFileSize;
+            _maxImageWidth = _options.FileUploadSettings.MaxImageWidth;
+            _maxImageHeight = _options.FileUploadSettings.MaxImageHeight;
+            _allowedMimeTypes = _options.FileUploadSettings.AllowedMimeTypes;
+        }       
 
         public async Task<string?> UploadFileAsync(IFormFile file)
         {
-            try
+            if (!IsValidMimeType(file))
             {
-                string fileExtension = Path.GetExtension(file.FileName).ToLower();
-                if (!_allowedImageExtensions.Contains(fileExtension) && fileExtension != _allowedTextExtension)
-                {
-                    Log.Warning($"Wrong extentions {file.FileName}");
-                    return null;
-                }
-
-                if (_allowedImageExtensions.Contains(fileExtension))
-                {
-                    return await ProcessImageUploadAsync(file);
-                }
-                else if (fileExtension == _allowedTextExtension)
-                {
-                    return await ProcessTextFileUploadAsync(file);
-                }
-
+                Log.Warning($"File with wrong MIME-type: {file.FileName}, {file.ContentType}");
                 return null;
             }
-            catch (Exception ex)
+
+            string fileExtension = Path.GetExtension(file.FileName).ToLower();
+
+            if (_allowedImageExtensions.Contains(fileExtension))
             {
-                Log.Error($"Error uploading file {file.FileName}: {ex.Message}");
-                return null;
+                return await ProcessImageUploadAsync(file);
             }
+            else if (fileExtension == _allowedTextExtension)
+            {
+                return await ProcessTextFileUploadAsync(file);
+            }
+
+            return null;
+        }
+
+        private bool IsValidMimeType(IFormFile file)
+        {
+            var ext = Path.GetExtension(file.FileName).ToLower();
+            return _allowedMimeTypes.ContainsKey(ext) && file.ContentType == _allowedMimeTypes[ext];
         }
 
         private async Task<string?> ProcessImageUploadAsync(IFormFile file)
         {
-            using var image = Image.FromStream(file.OpenReadStream()); //Added using for linux
-
-            if (image.Width > _maxImageWidth || image.Height > _maxImageHeight)
+            try
             {
-                Log.Information($"{file.FileName} resize...");
-                using var resizedImage = ResizeImage(image, _maxImageWidth, _maxImageHeight);
+                using var image = Image.FromStream(file.OpenReadStream());
 
-                using var stream = new MemoryStream();
-                resizedImage.Save(stream, ImageFormat.Jpeg); // Или другой формат (PNG, GIF)
-                stream.Position = 0;
+                if (image.Width > _maxImageWidth || image.Height > _maxImageHeight)
+                {
+                    Log.Information($"Resizing image {file.FileName}...");
+                    using var resizedImage = ResizeImage(image, _maxImageWidth, _maxImageHeight);
 
-                return await UploadToBlobAsync(stream, file.FileName);
+                    using var stream = new MemoryStream();
+                    resizedImage.Save(stream, ImageFormat.Jpeg);
+                    stream.Position = 0;
+
+                    return await UploadToBlobWithRetryAsync(stream, file.FileName);
+                }
+
+                return await UploadToBlobWithRetryAsync(file.OpenReadStream(), file.FileName);
             }
-
-            return await UploadToBlobAsync(file.OpenReadStream(), file.FileName);
+            catch (Exception ex)
+            {
+                Log.Error($"Error processing image {file.FileName}: {ex.Message}");
+                return null;
+            }
         }
-
 
         private async Task<string?> ProcessTextFileUploadAsync(IFormFile file)
         {
             if (file.Length > _maxTextFileSize)
             {
-                Log.Warning($"Text {file.FileName} file limit 100 KB");
+                Log.Warning($"Text file {file.FileName} exceeds the size limit of 100 KB");
                 return null;
             }
 
-            return await UploadToBlobAsync(file.OpenReadStream(), file.FileName);
+            return await UploadToBlobWithRetryAsync(file.OpenReadStream(), file.FileName);
         }
 
-        private async Task<string?> UploadToBlobAsync(Stream fileStream, string fileName)
+        private async Task<string?> UploadToBlobWithRetryAsync(Stream fileStream, string fileName, int maxRetries = 3)
         {
-            try
-            {
-                var blobContainer = _blobServiceClient.GetBlobContainerClient(_containerName);
-                var blobClient = blobContainer.GetBlobClient($"{Guid.NewGuid()}_{fileName}");
+            var blobContainer = _blobServiceClient.GetBlobContainerClient(_containerName);
+            var safeFileName = $"{Guid.NewGuid()}_{Path.GetFileNameWithoutExtension(fileName.Replace(" ", "_"))}{Path.GetExtension(fileName).ToLower()}";
+            var blobClient = blobContainer.GetBlobClient(safeFileName);
 
-                await blobClient.UploadAsync(fileStream, true);
-                Log.Information($"File {fileName} uploaded: {blobClient.Uri}");
-                return blobClient.Uri.ToString();
-            }
-            catch (Exception ex)
+            var extension = Path.GetExtension(fileName).ToLower();
+            var isImage = _allowedImageExtensions.Contains(extension);
+            var contentType = isImage ? _allowedMimeTypes[extension] : "text/plain";
+            var contentDisposition = isImage ? "inline" : "attachment";
+
+            int retryCount = 0;
+            while (retryCount < maxRetries)
             {
-                Log.Error($"Error file uploading {fileName}: {ex.Message}");
-                return null;
+                try
+                {
+                    var options = new BlobUploadOptions
+                    {
+                        HttpHeaders = new BlobHttpHeaders
+                        {
+                            ContentType = contentType,
+                            ContentDisposition = contentDisposition
+                        }
+                    };
+
+                    await blobClient.UploadAsync(fileStream, options);
+                    Log.Information($"File uploaded successfully: {blobClient.Uri}");
+                    return blobClient.Uri.ToString();
+                }
+                catch (Exception ex)
+                {
+                    retryCount++;
+                    Log.Warning($"Retry {retryCount}/{maxRetries} failed for file {fileName}: {ex.Message}");
+                    await Task.Delay(1000);
+                }
             }
+
+            Log.Error($"File {fileName} failed to upload after {maxRetries} attempts.");
+            return null;
         }
+
 
         private static Image ResizeImage(Image image, int maxWidth, int maxHeight)
         {
-            var ratioX = (double)maxWidth / image.Width;
-            var ratioY = (double)maxHeight / image.Height;
-            var ratio = Math.Min(ratioX, ratioY);
+            double ratioX = (double)maxWidth / image.Width;
+            double ratioY = (double)maxHeight / image.Height;
+            double ratio = Math.Min(ratioX, ratioY);
 
             int newWidth = (int)(image.Width * ratio);
             int newHeight = (int)(image.Height * ratio);
@@ -124,7 +162,6 @@ namespace FileServiceAPI.Services
             return resized;
         }
 
-
         public async Task<bool> DeleteFileAsync(string fileUrl)
         {
             try
@@ -135,11 +172,12 @@ namespace FileServiceAPI.Services
                 var blobClient = blobContainer.GetBlobClient(blobName);
 
                 await blobClient.DeleteIfExistsAsync();
+                Log.Information($"🗑 File deleted successfully: {fileUrl}");
                 return true;
             }
             catch (Exception ex)
             {
-                Log.Error($"Error file removing {fileUrl}: {ex.Message}");
+                Log.Error($"❌ Error deleting file {fileUrl}: {ex.Message}");
                 return false;
             }
         }

@@ -1,4 +1,4 @@
-﻿namespace CommentSystem.Services.Interfaces
+﻿namespace FileServiceAPI.Services.Interfaces
 {
     public interface IFileStorageService
     {

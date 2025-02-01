@@ -1,5 +1,7 @@
-﻿using CommentSystem.Models;
+﻿using CommentSystem.Config;
+using CommentSystem.Models;
 using CommentSystem.Services.Interfaces;
+using Microsoft.Extensions.Options;
 
 namespace CommentSystem.Helpers
 {
@@ -7,11 +9,13 @@ namespace CommentSystem.Helpers
     {
         private readonly HttpClient _httpClient;
         private readonly string _captchaServiceUrl;
+        private readonly AppOptions _options;
 
-        public RemoteCaptchaService(HttpClient httpClient, IConfiguration configuration)
+        public RemoteCaptchaService(HttpClient httpClient, IOptions<AppOptions> options)
         {
             _httpClient = httpClient;
-            _captchaServiceUrl = configuration["CaptchaServiceUrl"] ?? "http://localhost:5002";
+            _options = options.Value;
+            _captchaServiceUrl = _options.CaptchaServiceUrl;
         }
 
         public async Task<bool> ValidateCaptchaAsync(string captchaKey, string userInput)

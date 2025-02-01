@@ -2,6 +2,7 @@
 using CaptchaServiceAPI.Models;
 using CaptchaServiceAPI.Services.Implementations;
 using Serilog;
+using CaptchaServiceAPI.Services.Interfaces;
 
 namespace CaptchaServiceAPI.Controllers
 {
@@ -9,9 +10,9 @@ namespace CaptchaServiceAPI.Controllers
     [ApiController]
     public class CaptchaController : ControllerBase
     {
-        private readonly CaptchaService _captchaService;
+        private readonly ICaptchaService _captchaService;
 
-        public CaptchaController(CaptchaService captchaService)
+        public CaptchaController(ICaptchaService captchaService)
         {
             _captchaService = captchaService;
         }

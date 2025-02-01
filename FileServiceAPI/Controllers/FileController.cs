@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using CommentSystem.Services.Interfaces;
+using FileServiceAPI.Services.Interfaces;
 
 namespace FileServiceAPI.Controllers
 {

@@ -1,12 +1,17 @@
 ﻿using CommentSystem.Models;
 using CommentSystem.Repositories.Interfaces;
 using CommentSystem.Services.Interfaces;
-using CommentSystem.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using System.Text.Json;
 using CommentSystem.Models.DTOs;
+using CommentSystem.Models.Inputs;
+using CommentSystem.Messaging.Interfaces;
+using FluentValidation;
+using FluentValidation.Results;
 using Serilog;
+using CommentSystem.Config;
+using Microsoft.Extensions.Options;
 
 namespace CommentSystem.Services.Implementations
 {
@@ -14,14 +19,27 @@ namespace CommentSystem.Services.Implementations
     {
         private readonly ICommentRepository _commentRepository;
         private readonly IDistributedCache _cache;
-        private readonly CaptchaValidator _captchaValidator;
+        private readonly IRabbitMqProducer _rabbitMqProducer;
+        private readonly IRemoteCaptchaService _remoteCaptchaService;
+        private readonly IValidator<AddCommentInput> _validator;
+        private readonly AppOptions _options;
+        private readonly string _queueName;
 
-        public CommentService(ICommentRepository commentRepository, IDistributedCache cache, CaptchaValidator captchaValidator)
+        public CommentService(
+            ICommentRepository commentRepository,
+            IDistributedCache cache,
+            IRabbitMqProducer rabbitMqProducer,
+            IRemoteCaptchaService remoteCaptchaService,
+            IValidator<AddCommentInput> validator,
+            IOptions<AppOptions> options)
         {
             _commentRepository = commentRepository;
-
             _cache = cache;
-            _captchaValidator = captchaValidator;
+            _rabbitMqProducer = rabbitMqProducer;
+            _remoteCaptchaService = remoteCaptchaService;
+            _validator = validator;
+            _options = options.Value;
+            _queueName = _options.RabbitMq.QueueName;
         }
 
         public async Task<List<Comment>> GetAllCommentsWithSortingAndPaginationAsync(string? sortBy, bool descending, int page, int pageSize)
@@ -80,6 +98,24 @@ namespace CommentSystem.Services.Implementations
             {
                 Log.Error(ex, "Error while adding comment");
             }
+        }
+
+        public async Task PublishCommentAsync(AddCommentInput input)
+        {
+            ValidationResult validationResult = await _validator.ValidateAsync(input);
+
+            if (!validationResult.IsValid)
+            {
+                throw new Exception(string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage)));
+            }
+
+            if (!await _remoteCaptchaService.ValidateCaptchaAsync(input.CaptchaKey, input.Captcha))
+            {
+                throw new Exception("Invalid CAPTCHA");
+            }
+
+            var commentData = CommentDto.FromAddCommentInput(input);
+            await _rabbitMqProducer.Publish(_queueName, commentData);
         }
     }
 }

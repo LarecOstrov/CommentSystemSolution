@@ -1,57 +1,29 @@
-﻿using CommentSystem.Messaging.Interfaces;
-using CommentSystem.Models.DTOs;
-using CommentSystem.Models.Inputs;
+﻿using CommentSystem.Models.Inputs;
 using CommentSystem.Services.Interfaces;
-using FluentValidation;
-using FluentValidation.Results;
 using Serilog;
-using System.Linq;
+using System.Threading.Tasks;
 
 namespace CommentSystem.GraphQL
 {
     public class Mutation
     {
-        private readonly IRabbitMqProducer _rabbitMqProducer;
-        private readonly IRemoteCaptchaService _remoteCaptchaService;
-        private readonly IFileServiceApiClient _fileServiceApiClient;
-        private readonly IValidator<AddCommentInput> _validator;
+        private readonly ICommentService _commentService;
 
-        public Mutation(IRabbitMqProducer rabbitMqProducer, IRemoteCaptchaService remoteCaptchaService, IFileServiceApiClient fileServiceApiClient, IValidator<AddCommentInput> validator)
+        public Mutation(ICommentService commentService)
         {
-            _rabbitMqProducer = rabbitMqProducer;
-            _remoteCaptchaService = remoteCaptchaService;
-            _fileServiceApiClient = fileServiceApiClient;
-            _validator = validator;
+            _commentService = commentService;
         }
 
         public async Task<string> AddComment(AddCommentInput input)
         {
             try
             {
-                ValidationResult validationResult = await _validator.ValidateAsync(input);
-
-                if (!validationResult.IsValid)
-                {
-                    throw new GraphQLException(string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage)));
-                }
-
-                if (!await _remoteCaptchaService.ValidateCaptchaAsync(input.CaptchaKey, input.Captcha))
-                {
-                    throw new GraphQLException("Invalid CAPTCHA");
-                }
-
-                var commentData = new CommentDto
-                {
-                    UserName = input.UserName,
-                    Email = input.Email,
-                    HomePage = input.HomePage,
-                    Text = input.Text,
-                    ImageUrl = input.ImageUrl,
-                    TextUrl = input.TextUrl
-                };
-
-                await _rabbitMqProducer.Publish("comments_queue", commentData);
+                await _commentService.PublishCommentAsync(input);
                 return "Comment is being processed";
+            }
+            catch (GraphQLException ex)
+            {
+                throw ex;
             }
             catch (Exception ex)
             {
