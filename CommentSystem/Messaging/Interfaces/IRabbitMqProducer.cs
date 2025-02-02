@@ -1,7 +1,6 @@
-﻿namespace CommentSystem.Messaging.Interfaces
+﻿namespace Common.Messaging.Interfaces;
+
+internal interface IRabbitMqProducer
 {
-    public interface IRabbitMqProducer
-    {
-        Task Publish<T>(string queueName, T message);
-    }
+    Task Publish<T>(string queueName, T message);
 }

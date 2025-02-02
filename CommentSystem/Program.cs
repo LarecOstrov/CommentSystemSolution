@@ -1,12 +1,12 @@
-﻿using CommentSystem.Data;
-using CommentSystem.GraphQL;
-using CommentSystem.Messaging.Consumers;
-using CommentSystem.Messaging.Interfaces;
-using CommentSystem.Messaging.Producers;
-using CommentSystem.Repositories.Implementations;
-using CommentSystem.Repositories.Interfaces;
-using CommentSystem.Services.Implementations;
-using CommentSystem.Services.Interfaces;
+﻿using Common.Data;
+using Common.GraphQL;
+using Common.Messaging.Consumers;
+using Common.Messaging.Interfaces;
+using Common.Messaging.Producers;
+using Common.Repositories.Implementations;
+using Common.Repositories.Interfaces;
+using Common.Services.Implementations;
+using Common.Services.Interfaces;
 using CommentSystem.WebSockets;
 using FluentValidation;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -14,11 +14,11 @@ using Microsoft.EntityFrameworkCore;
 using Prometheus;
 using RabbitMQ.Client;
 using Serilog;
-using CommentSystem.Helpers;
-using CommentSystem.Models.Inputs;
+using Common.Models.Inputs;
 using CommentSystem.Config;
-using Common.Middleware;
+using Common.Middlewares;
 using Common.Extensions;
+using CommentSystem.Helpers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -94,8 +94,7 @@ async Task ConfigureServicesAsync(IServiceCollection services, AppOptions option
 
     // Services
     services.AddScoped<ICommentService, CommentService>();
-    services.AddScoped<IRemoteCaptchaService, RemoteCaptchaService>();
-    services.AddHttpClient<IFileServiceApiClient, FileServiceApiClient>();
+    builder.Services.AddScoped<ICaptchaCacheService, CaptchaCacheService>();
 
     // GraphQL
     services

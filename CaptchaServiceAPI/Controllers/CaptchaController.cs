@@ -1,52 +1,57 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using CaptchaServiceAPI.Models;
-using CaptchaServiceAPI.Services.Implementations;
-using Serilog;
+﻿using CaptchaServiceAPI.Models;
 using CaptchaServiceAPI.Services.Interfaces;
+using Common.Services.Interfaces;
+using Microsoft.AspNetCore.Mvc;
+using Serilog;
 
-namespace CaptchaServiceAPI.Controllers
+namespace CaptchaServiceAPI.Controllers;
+
+[Route("api/captcha")]
+[ApiController]
+internal class CaptchaController : ControllerBase
 {
-    [Route("api/captcha")]
-    [ApiController]
-    public class CaptchaController : ControllerBase
+    private readonly ICaptchaService _captchaService;
+    private readonly ICaptchaCacheService _captchaCacheService;
+
+
+    public CaptchaController(ICaptchaService captchaService, ICaptchaCacheService captchaCacheService)
     {
-        private readonly ICaptchaService _captchaService;
+        _captchaService = captchaService;
+        _captchaCacheService = captchaCacheService;
+    }
 
-        public CaptchaController(ICaptchaService captchaService)
+    [HttpGet("generate")]
+    public async Task<IActionResult> GenerateCaptcha()
+    {
+        try
         {
-            _captchaService = captchaService;
-        }
+            var (imageBytes, captchaKey) = await _captchaService.GenerateCaptchaAsync();
+            var base64Image = Convert.ToBase64String(imageBytes);
 
-        [HttpGet("generate")]
-        public async Task<IActionResult> GenerateCaptcha()
+            return Ok(new { image = $"data:image/png;base64,{base64Image}", captchaKey });
+        }
+        catch (Exception ex)
         {
-            try
-            {
-                var (imageBytes, captchaKey) = await _captchaService.GenerateCaptchaAsync();
-                var base64Image = Convert.ToBase64String(imageBytes);
-
-                return Ok(new { image = $"data:image/png;base64,{base64Image}", captchaKey });
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Error while generating captcha");
-                return BadRequest(ex.Message);
-            }
+            Log.Error(ex, "Error while generating captcha");
+            return BadRequest(ex.Message);
         }
+    }
 
-        [HttpPost("validate")]
-        public async Task<IActionResult> ValidateCaptcha([FromBody] CaptchaValidationRequest request)
+    [HttpPost("validate")]
+    public async Task<IActionResult> ValidateCaptcha([FromBody] CaptchaValidationRequest request)
+    {
+        try
         {
-            try
+            if (await _captchaCacheService.ValidateCaptchaAsync(request.CaptchaKey, request.UserInput))
             {
-                var isValid = await _captchaService.ValidateCaptchaAsync(request.CaptchaKey, request.UserInput);
-                return Ok(new { isValid });
+                return Ok(new { isValid = true });
             }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Error while validating captcha");
-                return BadRequest(new { isValid = true });
-            }
+            return BadRequest((new { isValid = false }));
         }
-    }    
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error while validating captcha");
+            return BadRequest(new { isValid = true });
+        }
+    }
 }

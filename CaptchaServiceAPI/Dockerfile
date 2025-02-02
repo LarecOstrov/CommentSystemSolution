@@ -1,49 +1,35 @@
-# Use the official .NET SDK image for build
+# Use the official SDK image for the build process
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
-WORKDIR /app
+WORKDIR /src/CaptchaServiceAPI  # Ensure we are in the correct directory
+
+# Set explicit NuGet package location
+ENV NUGET_PACKAGES=/root/.nuget/packages
 
 # Copy the project file and restore dependencies
-COPY . .
-RUN dotnet restore
-RUN dotnet publish -c Release -o /out
+COPY CaptchaServiceAPI.csproj ./
+RUN dotnet restore --force --verbosity detailed
 
-# Use the official .NET ASP.NET Core runtime image for running the app
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
+# Copy the remaining source files
+COPY . .  
+
+# Create the publish directory
+RUN mkdir -p /app/publish
+
+# Compile and publish the project
+RUN dotnet publish -c Release -o /app/publish --no-restore
+
+# Use the official .NET 9 ASP.NET Core runtime image for running the app
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
-COPY --from=build /out ./
 
-# Run the app
+# Copy the published application from the build stage
+COPY --from=build /app/publish .
+
+# Expose the port
+EXPOSE 5004
+EXPOSE 5005
+# Define the entry point
 ENTRYPOINT ["dotnet", "CaptchaServiceAPI.dll"]
 
-
-
-## See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
-#
-## This stage is used when running from VS in fast mode (Default for Debug configuration)
-#FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
-#USER $APP_UID
-#WORKDIR /app
-#EXPOSE 8080
-#EXPOSE 8081
-#
-#
-## This stage is used to build the service project
-#FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
-#ARG BUILD_CONFIGURATION=Release
-#WORKDIR /src
-#COPY ["CaptchaServiceAPI/CaptchaServiceAPI.csproj", "CaptchaServiceAPI/"]
-#RUN dotnet restore "./CaptchaServiceAPI/CaptchaServiceAPI.csproj"
-#COPY . .
-#WORKDIR "/src/CaptchaServiceAPI"
-#RUN dotnet build "./CaptchaServiceAPI.csproj" -c $BUILD_CONFIGURATION -o /app/build
-#
-## This stage is used to publish the service project to be copied to the final stage
-#FROM build AS publish
-#ARG BUILD_CONFIGURATION=Release
-#RUN dotnet publish "./CaptchaServiceAPI.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
-#
-## This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
-#FROM base AS final
-#WORKDIR /app
-#COPY --from=publish /app/publish .
-#ENTRYPOINT ["dotnet", "CaptchaServiceAPI.dll"]
+# Override the default command to set URLs dynamically
+CMD ["--urls", "http://+:5002"]

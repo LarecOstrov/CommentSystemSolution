@@ -1,29 +1,28 @@
-﻿using CommentSystem.Models;
-using CommentSystem.Services.Interfaces;
+﻿using Common.Models;
+using Common.Services.Interfaces;
 using Serilog;
 
-namespace CommentSystem.GraphQL
+namespace Common.GraphQL;
+
+internal class Query
 {
-    public class Query
+    internal readonly ICommentService _commentService;
+
+    public Query(ICommentService commentService)
     {
-        private readonly ICommentService _commentService;
+        _commentService = commentService;
+    }
 
-        public Query(ICommentService commentService)
+    public async Task<List<Comment>> GetComments(string? sortBy = null, bool descending = true, int page = 1, int pageSize = 25)
+    {
+        try
         {
-            _commentService = commentService;
+            return await _commentService.GetAllCommentsWithSortingAndPaginationAsync(sortBy, descending, page, pageSize);
         }
-
-        public async Task<List<Comment>> GetComments(string? sortBy = null, bool descending = true, int page = 1, int pageSize = 25)
+        catch (Exception ex)
         {
-            try
-            {
-                return await _commentService.GetAllCommentsWithSortingAndPaginationAsync(sortBy, descending, page, pageSize);
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, $"Error while getting comments: sortBy - {sortBy}, descending - {descending}, page - {page}, pageSize - {pageSize}");
-                return new List<Comment>();
-            }
+            Log.Error(ex, $"Error while getting comments: sortBy - {sortBy}, descending - {descending}, page - {page}, pageSize - {pageSize}");
+            return new List<Comment>();
         }
     }
 }

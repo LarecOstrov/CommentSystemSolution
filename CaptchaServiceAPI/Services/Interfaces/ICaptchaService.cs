@@ -1,8 +1,6 @@
-﻿namespace CaptchaServiceAPI.Services.Interfaces
+﻿namespace CaptchaServiceAPI.Services.Interfaces;
+
+internal interface ICaptchaService
 {
-    public interface ICaptchaService
-    {
-        Task<(byte[], string)> GenerateCaptchaAsync();
-        Task<bool> ValidateCaptchaAsync(string captchaKey, string userInput);
-    }
+    Task<(byte[], Guid)> GenerateCaptchaAsync();
 }

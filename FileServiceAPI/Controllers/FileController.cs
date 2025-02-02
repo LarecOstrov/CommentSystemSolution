@@ -1,27 +1,79 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using FileServiceAPI.Services.Interfaces;
+using Common.Services.Interfaces;
+using Common.Enums;
+using Common.Models;
+using Common.Repositories.Interfaces;
+using Serilog;
 
-namespace FileServiceAPI.Controllers
+namespace FileServiceAPI.Controllers;
+
+[ApiController]
+[Route("api/files")]
+internal class FileController : ControllerBase
 {
-    [ApiController]
-    [Route("api/files")]
-    public class FileController : ControllerBase
+    private readonly IFileStorageService _fileStorageService;
+    private readonly ICaptchaCacheService _captchaCacheService;
+    private readonly IFileAttachmentService _fileAttachmentService;
+    private readonly ICommentRepository _commentRepository;
+
+    public FileController(IFileStorageService fileStorageService, ICaptchaCacheService captchaCacheService,
+        IFileAttachmentService fileAttachmentService, ICommentRepository commentRepository)
     {
-        private readonly IFileStorageService _fileStorageService;
+        _fileStorageService = fileStorageService;
+        _captchaCacheService = captchaCacheService;
+        _fileAttachmentService = fileAttachmentService;
+        _commentRepository = commentRepository;
+    }
 
-        public FileController(IFileStorageService fileStorageService)
+    [HttpPost("upload")]
+    public async Task<IActionResult> UploadFile([FromForm] IFormFile file, Guid captchaKey, string userInput)
+    {
+        string message = "";
+        try
         {
-            _fileStorageService = fileStorageService;
-        }
+            if (!await _captchaCacheService.ValidateCaptchaAsync(captchaKey, userInput))
+            {
+                return BadRequest("Invalid CAPTCHA");
+            }                
 
-        [HttpPost("upload")]
-        public async Task<IActionResult> UploadFile([FromForm] IFormFile file)
+            if (file is null || file.Length == 0)
+            {
+                message = "Invalid file";
+            }
+            else
+            {
+                var fileUrl = await _fileStorageService.UploadFileAsync(file);
+
+                if (string.IsNullOrEmpty(fileUrl))
+                {
+                    message = "Error uploading file";
+                }
+
+                if (fileUrl is not null)
+                {
+                    if (!await _fileAttachmentService.AddFileAsync(new FileAttachment
+                    {
+                        Url = fileUrl,
+                        Type = file.ContentType.Contains("text") ? FileType.Text : FileType.Image,
+                        CommentId = captchaKey
+                    }))
+                    {
+                        message = "Error saving Url";
+                    }
+                    else
+                    {
+                        return Ok(fileUrl);
+                    }
+                }
+            }
+            await _commentRepository.UpdateHasAttachmentAsync(captchaKey, false);
+        }
+        catch (Exception ex)
         {
-            if (file == null || file.Length == 0)
-                return BadRequest("Invalid file.");
-
-            var result = await _fileStorageService.UploadFileAsync(file);
-            return Ok(result);
+            Log.Error(ex, "Error while uploading file");
+            message = ex.Message;
         }
+        return BadRequest(message);
     }
 }

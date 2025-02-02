@@ -1,22 +1,20 @@
-﻿using CommentSystem.Models.Inputs;
-using CommentSystem.Services.Interfaces;
+﻿using Common.Models.Inputs;
+using Common.Services.Interfaces;
 using Microsoft.AspNetCore.SignalR;
-using System.Threading.Tasks;
 
-namespace CommentSystem.WebSockets
+namespace CommentSystem.WebSockets;
+
+internal class WebSocketHub : Hub
 {
-    public class WebSocketHub : Hub
+    private readonly ICommentService _commentService;
+
+    public WebSocketHub(ICommentService commentService)
     {
-        private readonly ICommentService _commentService;
+        _commentService = commentService;
+    }
 
-        public WebSocketHub(ICommentService commentService)
-        {
-            _commentService = commentService;
-        }
-
-        public async Task SendMessage(AddCommentInput input)
-        {
-            await _commentService.PublishCommentAsync(input);
-        }
+    public async Task SendMessage(AddCommentInput input)
+    {
+        await _commentService.PublishCommentAsync(input);
     }
 }

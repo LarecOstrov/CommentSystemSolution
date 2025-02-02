@@ -1,48 +1,35 @@
-# See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
-
-# Use the .NET 9 SDK image for building the app
+# Use the official SDK image for the build process
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
-WORKDIR /app
+WORKDIR /src/FileServiceAPI  # Ensure correct working directory
+
+# Set explicit NuGet package location
+ENV NUGET_PACKAGES=/root/.nuget/packages
 
 # Copy the project file and restore dependencies
-COPY . .
-RUN dotnet restore
-RUN dotnet publish -c Release -o /out
+COPY FileServiceAPI.csproj ./
+RUN dotnet restore --force --verbosity detailed
 
-# Use the .NET 9 ASP.NET Core runtime image for running the app
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
+# Copy the remaining source files
+COPY . .  
+
+# Create the publish directory
+RUN mkdir -p /app/publish
+
+# Compile and publish the project
+RUN dotnet publish -c Release -o /app/publish --no-restore
+
+# Use the official .NET 9 ASP.NET Core runtime image for running the app
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
-COPY --from=build /out ./
 
-# Run the app
+# Copy the published application from the build stage
+COPY --from=build /app/publish .
+
+# Expose the port
+EXPOSE 5002
+EXPOSE 5003
+# Define the entry point
 ENTRYPOINT ["dotnet", "FileServiceAPI.dll"]
 
-
-## This stage is used when running from VS in fast mode (Default for Debug configuration)
-#FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
-#USER $APP_UID
-#WORKDIR /app
-#EXPOSE 8080
-#EXPOSE 8081
-#
-#
-## This stage is used to build the service project
-#FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
-#ARG BUILD_CONFIGURATION=Release
-#WORKDIR /src
-#COPY ["FileServiceAPI/FileServiceAPI.csproj", "FileServiceAPI/"]
-#RUN dotnet restore "./FileServiceAPI/FileServiceAPI.csproj"
-#COPY . .
-#WORKDIR "/src/FileServiceAPI"
-#RUN dotnet build "./FileServiceAPI.csproj" -c $BUILD_CONFIGURATION -o /app/build
-#
-## This stage is used to publish the service project to be copied to the final stage
-#FROM build AS publish
-#ARG BUILD_CONFIGURATION=Release
-#RUN dotnet publish "./FileServiceAPI.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
-#
-## This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
-#FROM base AS final
-#WORKDIR /app
-#COPY --from=publish /app/publish .
-#ENTRYPOINT ["dotnet", "FileServiceAPI.dll"]
+# Override the default command to set URLs dynamically
+CMD ["--urls", "http://+:5003"]

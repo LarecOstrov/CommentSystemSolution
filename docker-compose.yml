@@ -6,18 +6,23 @@ services:
       context: .
       dockerfile: CommentSystem/Dockerfile
     ports:
-      - "5000:5000" # HTTP порт
-      - "5001:5001" # HTTPS порт
+      - "5000:5000"
+      - "5001:5001"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Server=db;Database=CommentSystemDB;User Id=CommentSystemAdmin;Password=CommentSystem!2025;TrustServerCertificate=True      
       - ConnectionStrings__Redis=redis:6379
       - ConnectionStrings__RabbitMQ=amqp://CommentSystemAdmin:CommentSystem!2025@rabbitmq:5672
+      - ASPNETCORE_URLS=http://+:5000
     depends_on:
-      - db
-      - redis
-      - rabbitmq
-      - captcha_service
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      captcha_service:
+        condition: service_healthy
     restart: always
 
   db:
@@ -32,6 +37,12 @@ services:
     volumes:
       - mssql_data:/var/opt/mssql
     restart: always
+    healthcheck:
+      test: ["CMD", "sqlcmd", "-S", "localhost", "-U", "sa", "-P", "CommentSystem!2025", "-Q", "SELECT 1"]
+      interval: 10s
+      retries: 5
+      start_period: 20s
+      timeout: 5s
 
   redis:
     image: redis:latest
@@ -40,14 +51,19 @@ services:
       - "6379:6379"
     command: ["redis-server"]
     restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 5
+      timeout: 3s
 
   rabbitmq:
     image: rabbitmq:management
     container_name: rabbitmq_server
     hostname: rabbitmq
     ports:
-      - "5672:5672"   # AMQP (для .NET)
-      - "15672:15672" # Web UI
+      - "5672:5672"
+      - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: CommentSystemAdmin
       RABBITMQ_DEFAULT_PASS: CommentSystem!2025
@@ -66,22 +82,36 @@ services:
       context: ./CaptchaServiceAPI
       dockerfile: Dockerfile
     ports:
-      - "5002:5002"
+      - "5004:5004"
+      - "5005:5005"
     environment:
       - ConnectionStrings__Redis=redis:6379
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     restart: always
-    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
+
   fileapi:
     build:
       context: ./FileServiceAPI
       dockerfile: Dockerfile
     ports:
+      - "5002:5002"
       - "5003:5003"
     environment:
       - AzureBlobStorage__ConnectionString=DefaultEndpointsProtocol=https;AccountName=commentsystemstorage;AccountKey=3VXV9erOiP7q57DuRFXvE8jOtuX9TPVm2HK/fVCbfcNGcw8p5mI79DYPyQouRKRf/GIKzKYVw5qT+AStHUlQjQ==;EndpointSuffix=core.windows.net
       - AzureBlobStorage__ContainerName=comment-files
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5003/health"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
 
 volumes:
   mssql_data:

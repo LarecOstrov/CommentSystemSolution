@@ -1,10 +1,15 @@
-﻿using FileServiceAPI.Config;
-using FileServiceAPI.Services;
-using Serilog;
-using Microsoft.AspNetCore.HttpOverrides;
-using FileServiceAPI.Services.Interfaces;
-using Common.Middleware;
+﻿using Common.Data;
 using Common.Extensions;
+using Common.Middlewares;
+using Common.Repositories.Implementations;
+using Common.Repositories.Interfaces;
+using FileServiceAPI.Config;
+using FileServiceAPI.Services.Implementations;
+using FileServiceAPI.Services.Interfaces;
+using FileServiceAPI.Workers;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 AppContext.SetSwitch("System.Drawing.EnableUnixSupport", true);
 
@@ -59,10 +64,20 @@ AppOptions LoadAppOptions(WebApplicationBuilder builder)
 /// <summary>
 /// Register services in DI container
 /// </summary>
-void ConfigureServices(WebApplicationBuilder builder, AppOptions appOptions)
+void ConfigureServices(WebApplicationBuilder builder, AppOptions options)
 {
-    // Azure Blob Storage Service
-    builder.Services.AddSingleton<IFileStorageService, AzureBlobService>();
+    // MSSQL
+    builder.Services.AddDbContext<ApplicationDbContext>(dbOptions =>
+        dbOptions.UseSqlServer(options.ConnectionStrings.DefaultConnection));
+
+    // Services
+    builder.Services.AddScoped<IFileStorageService, FileStorageService>();
+    builder.Services.AddScoped<IFileAttachmentService, FileAttachmentService>();
+    builder.Services.AddScoped<IOrphanFileCleanupService, OrphanFileCleanupService>();
+    builder.Services.AddHostedService<OrphanFileCleanupWorker>();
+
+    //Repository
+    builder.Services.AddScoped<IFileAttachmentRepository, FileAttachmentRepository>();
 
     // Controllers
     builder.Services.AddControllers();

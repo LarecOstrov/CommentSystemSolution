@@ -1,35 +1,31 @@
-﻿using CommentSystem.Models.Inputs;
-using CommentSystem.Services.Interfaces;
+﻿using Common.Models.Inputs;
+using Common.Services.Interfaces;
 using Serilog;
-using System.Threading.Tasks;
 
-namespace CommentSystem.GraphQL
+namespace Common.GraphQL;
+
+internal class Mutation
 {
-    public class Mutation
+    private readonly ICommentService _commentService;
+
+    public Mutation(ICommentService commentService)
     {
-        private readonly ICommentService _commentService;
+        _commentService = commentService;
+    }
 
-        public Mutation(ICommentService commentService)
+    public async Task<string> AddComment(AddCommentInput input)
+    {
+        try
         {
-            _commentService = commentService;
+            await _commentService.PublishCommentAsync(input);
+            return "Comment is being processed";
         }
-
-        public async Task<string> AddComment(AddCommentInput input)
+        catch (Exception ex)
         {
-            try
-            {
-                await _commentService.PublishCommentAsync(input);
-                return "Comment is being processed";
-            }
-            catch (GraphQLException ex)
-            {
-                throw ex;
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Error while adding comment");
-                throw new GraphQLException("Internal server error");
-            }
+            Log.Error(ex, "Error while adding comment");
+            throw ex is GraphQLException
+                ? ex
+                : new GraphQLException("Internal server error");
         }
     }
 }

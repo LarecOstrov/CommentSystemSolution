@@ -1,8 +1,9 @@
-﻿using CommentSystem.Helpers;
-using CommentSystem.Models.Inputs;
+﻿using Common.Models.Inputs;
 using FluentValidation;
 
-public class AddCommentInputValidator : AbstractValidator<AddCommentInput>
+namespace CommentSystem.Helpers;
+
+internal class AddCommentInputValidator : AbstractValidator<AddCommentInput>
 {
     public AddCommentInputValidator()
     {

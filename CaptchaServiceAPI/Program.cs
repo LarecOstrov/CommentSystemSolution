@@ -1,11 +1,11 @@
-﻿using CaptchaServiceAPI.Services.Implementations;
+﻿using CaptchaServiceAPI.Config;
+using CaptchaServiceAPI.Services.Implementations;
 using CaptchaServiceAPI.Services.Interfaces;
+using Common.Extensions;
+using Common.Middlewares;
+using DNTCaptcha.Core;
 using Microsoft.AspNetCore.HttpOverrides;
 using Serilog;
-using CaptchaServiceAPI.Config;
-using Common.Middleware;
-using Common.Extensions;
-using DNTCaptcha.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 

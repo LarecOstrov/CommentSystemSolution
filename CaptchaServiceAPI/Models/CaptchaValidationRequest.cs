@@ -1,8 +1,7 @@
-﻿namespace CaptchaServiceAPI.Models
+﻿namespace CaptchaServiceAPI.Models;
+
+public class CaptchaValidationRequest
 {
-    public class CaptchaValidationRequest
-    {
-        public string CaptchaKey { get; set; } = string.Empty;
-        public string UserInput { get; set; } = string.Empty;
-    }
+    public required Guid CaptchaKey { get; set; }
+    public required string UserInput { get; set; }
 }
