@@ -4,7 +4,7 @@ public interface IAbstractRepository<T> where T : class
 {
     IQueryable<T> GetAll();
     Task<T?> GetByIdAsync(Guid id);
-    Task<bool> AddAsync(T comment);
-    Task<bool> UpdateAsync(T comment);
+    Task<T> AddAsync(T entity);
+    Task<T> UpdateAsync(T entity);
     Task<bool> DeleteAsync(Guid id);
 }

@@ -30,16 +30,24 @@ public class CommentRepository : ICommentRepository
             .FirstOrDefaultAsync(c => c.Id == id);
     }
 
-    public async Task<bool> AddAsync(Comment comment)
+    public async Task<Comment> AddAsync(Comment comment)
     {
         await _context.Comments.AddAsync(comment);
-        return await _context.SaveChangesAsync() > 0;
+        if (await _context.SaveChangesAsync() > 0)
+        {
+            return comment;
+        }
+        throw new DbUpdateException("Failed to add comment");
     }
 
-    public async Task<bool> UpdateAsync(Comment comment)
+    public async Task<Comment> UpdateAsync(Comment comment)
     {
         _context.Comments.Update(comment);
-        return await _context.SaveChangesAsync() > 0;
+        if(await _context.SaveChangesAsync() > 0)
+        {
+            return comment;
+        }
+        throw new DbUpdateException("Failed to update comment");
     }
 
     public async Task<bool> DeleteAsync(Guid id)

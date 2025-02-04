@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileServiceAPI", "FileServi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Common.csproj", "{4E3BB7CD-F280-447A-B7D0-15F60D3100D9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommentSystem.Tests", "CommentSystem.Tests\CommentSystem.Tests.csproj", "{2DA26442-CE5A-407C-886D-AB94297E1768}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{4E3BB7CD-F280-447A-B7D0-15F60D3100D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4E3BB7CD-F280-447A-B7D0-15F60D3100D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4E3BB7CD-F280-447A-B7D0-15F60D3100D9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2DA26442-CE5A-407C-886D-AB94297E1768}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2DA26442-CE5A-407C-886D-AB94297E1768}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2DA26442-CE5A-407C-886D-AB94297E1768}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2DA26442-CE5A-407C-886D-AB94297E1768}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

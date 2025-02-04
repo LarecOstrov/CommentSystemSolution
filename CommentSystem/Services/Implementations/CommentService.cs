@@ -15,7 +15,7 @@ using System.Text.Json;
 
 namespace Common.Services.Implementations;
 
-internal class CommentService : ICommentService
+public class CommentService : ICommentService
 {
     private readonly ICommentRepository _commentRepository;
     private readonly IDistributedCache _cache;
@@ -75,7 +75,7 @@ internal class CommentService : ICommentService
         return commentList;
     }
 
-    public async Task AddCommentAsync(CommentDto input)
+    public async Task<Comment> AddCommentAsync(CommentDto input)
     {
         try
         {
@@ -92,11 +92,12 @@ internal class CommentService : ICommentService
                 HasAttachment = input.HasAttachment
             };
 
-            await _commentRepository.AddAsync(comment);
+            return await _commentRepository.AddAsync(comment);
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Error while adding comment");
+            throw;
         }
     }
 
