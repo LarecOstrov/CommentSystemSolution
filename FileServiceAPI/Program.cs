@@ -23,7 +23,7 @@ ConfigureServices(builder, appOptions);
 builder.Services.ConfigureRateLimiting(appOptions, opts => opts.IpRateLimit);
 
 var app = builder.Build();
-ConfigureMiddleware(app, appOptions);
+await ConfigureMiddleware(app, appOptions);
 
 
 app.Run();
@@ -58,6 +58,7 @@ AppOptions LoadAppOptions(WebApplicationBuilder builder)
     }
 
     builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("AppOptions"));
+    Log.Warning($"DefaultConnection: {appOptions.ConnectionStrings.DefaultConnection}");
     return appOptions;
 }
 
@@ -66,6 +67,7 @@ AppOptions LoadAppOptions(WebApplicationBuilder builder)
 /// </summary>
 void ConfigureServices(WebApplicationBuilder builder, AppOptions options)
 {
+    
     // MSSQL
     builder.Services.AddDbContext<ApplicationDbContext>(dbOptions =>
         dbOptions.UseSqlServer(options.ConnectionStrings.DefaultConnection));
@@ -109,7 +111,7 @@ void ConfigureServices(WebApplicationBuilder builder, AppOptions options)
 /// <summary>
 /// Configure middleware
 /// </summary>
-void ConfigureMiddleware(WebApplication app, AppOptions appOptions)
+async Task ConfigureMiddleware(WebApplication app, AppOptions appOptions)
 {
     // Proxing IP (for Reverse Proxy)
     app.UseForwardedHeaders(new ForwardedHeadersOptions
@@ -120,6 +122,12 @@ void ConfigureMiddleware(WebApplication app, AppOptions appOptions)
     // Middleware logging
     app.UseMiddleware<RequestLoggingMiddleware>();
     app.UseRequestLogging();
+
+    // Auto-migrate database in development
+    if (app.Environment.IsDevelopment())
+    {
+        await ApplyMigrationsAsync(app);
+    }
     // Swagger for development
     {
         app.UseSwagger();
@@ -131,4 +139,25 @@ void ConfigureMiddleware(WebApplication app, AppOptions appOptions)
 
     app.UseAuthorization();
     app.MapControllers();
+}
+
+/// <summary>
+/// Apply database migrations
+/// </summary>
+async Task ApplyMigrationsAsync(WebApplication app)
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+    var pendingMigrations = (await dbContext.Database.GetPendingMigrationsAsync()).ToList();
+    if (pendingMigrations.Any())
+    {
+        Log.Information("Applying {Count} pending migrations...", pendingMigrations.Count);
+        await dbContext.Database.MigrateAsync();
+        Log.Information("Database migrations applied successfully.");
+    }
+    else
+    {
+        Log.Information("No pending migrations found.");
+    }
 }

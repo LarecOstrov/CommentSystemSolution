@@ -1,12 +1,11 @@
 ﻿using Common.Messaging.Interfaces;
-using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
+using RabbitMQ.Client;
 using Serilog;
 using System.Text;
 using System.Text.Json;
 
-namespace Common.Messaging.Producers;
-
+namespace CommentSystem.Messaging.Producers;   
 internal class RabbitMqProducer : IRabbitMqProducer, IAsyncDisposable
 {
     private readonly IConnectionFactory _connectionFactory;
@@ -18,18 +17,24 @@ internal class RabbitMqProducer : IRabbitMqProducer, IAsyncDisposable
     public RabbitMqProducer(IConnectionFactory connectionFactory)
     {
         _connectionFactory = connectionFactory;
-        Task.Run(ReconnectAsync).GetAwaiter().GetResult(); // Initialize connection
+        _ = Task.Run(ReconnectAsync); // Run reconnect in background
     }
 
     private async Task ReconnectAsync()
     {
-        if (!_reconnectLock.Wait(0))
-        {
-            return; // Already reconnecting
-        }
+        await _reconnectLock.WaitAsync(); // Ensure only one reconnect attempt at a time
 
         try
         {
+            if (_connection?.IsOpen == true && _channel?.IsOpen == true)
+            {
+                Log.Information("RabbitMQ connection already open.");
+                return;
+            }
+
+            // Cleanup existing connection and channel
+            await DisposeAsync();
+
             while (_connection == null || !_connection.IsOpen)
             {
                 try
@@ -76,14 +81,16 @@ internal class RabbitMqProducer : IRabbitMqProducer, IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         Log.Information("Disposing RabbitMqProducer...");
-        if (_channel is not null)
+        if (_channel is not null && _channel.IsOpen)
         {
             await _channel.CloseAsync();
         }
-        if (_connection is not null)
+        if (_connection is not null && _connection.IsOpen)
         {
             await _connection.CloseAsync();
         }
+        _channel = null;
+        _connection = null;
         Log.Information("RabbitMqProducer disposed.");
     }
 }

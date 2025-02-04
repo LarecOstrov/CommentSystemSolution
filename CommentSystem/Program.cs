@@ -1,13 +1,13 @@
 ﻿using Common.Data;
 using Common.GraphQL;
-using Common.Messaging.Consumers;
 using Common.Messaging.Interfaces;
-using Common.Messaging.Producers;
 using Common.Repositories.Implementations;
 using Common.Repositories.Interfaces;
 using Common.Services.Implementations;
 using Common.Services.Interfaces;
 using CommentSystem.WebSockets;
+using CommentSystem.Messaging.Consumers;
+using CommentSystem.Messaging.Producers;
 using FluentValidation;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
@@ -63,6 +63,7 @@ AppOptions LoadAppOptions(WebApplicationBuilder builder)
     }
 
     builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("AppOptions"));
+    Log.Warning($"DefaultConnection: {appOptions.ConnectionStrings.DefaultConnection}");
     return appOptions;
 }
 
@@ -76,6 +77,7 @@ async Task ConfigureServicesAsync(IServiceCollection services, AppOptions option
         dbOptions.UseSqlServer(options.ConnectionStrings.DefaultConnection));
 
     // RabbitMQ
+    
     var factory = new ConnectionFactory
     {
         HostName = options.RabbitMq.HostName,
@@ -84,11 +86,15 @@ async Task ConfigureServicesAsync(IServiceCollection services, AppOptions option
         Port = options.RabbitMq.Port
     };
 
+    Log.Information($"Connecting to RabbitMQ at {factory.HostName}:{factory.Port}, {factory.UserName} {factory.Password}");
+    services.AddSingleton<IConnectionFactory>(factory);
     var rabbitConnection = await factory.CreateConnectionAsync();
     services.AddSingleton<IConnection>(rabbitConnection);
     services.AddSingleton<IRabbitMqProducer, RabbitMqProducer>();
     services.AddHostedService<RabbitMqConsumer>();
 
+    // Add Controllers
+    services.AddControllers();
     // Repositories
     services.AddScoped<ICommentRepository, CommentRepository>();
 
@@ -147,6 +153,8 @@ async Task ConfigureMiddleware(WebApplication app)
     app.MapHub<WebSocketHub>("/ws"); // WebSocket
     app.MapGraphQL();
     app.MapMetrics(); // Prometheus
+
+    app.MapControllers();
 }
 
 /// <summary>
@@ -156,5 +164,16 @@ async Task ApplyMigrationsAsync(WebApplication app)
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await dbContext.Database.MigrateAsync();
+
+    var pendingMigrations = (await dbContext.Database.GetPendingMigrationsAsync()).ToList();
+    if (pendingMigrations.Any())
+    {
+        Log.Information("Applying {Count} pending migrations...", pendingMigrations.Count);
+        await dbContext.Database.MigrateAsync();
+        Log.Information("Database migrations applied successfully.");
+    }
+    else
+    {
+        Log.Information("No pending migrations found.");
+    }
 }
