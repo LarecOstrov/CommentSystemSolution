@@ -1,23 +1,34 @@
-﻿version: '3.8'
-
+﻿
 services:
   app:
     build:
       context: .
       dockerfile: CommentSystem/Dockerfile
     ports:
-      - "5000:5000" # HTTP порт
-      - "5001:5001" # HTTPS порт
+      - "5000:5000"
+      - "5001:5001"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=db;Database=CommentSystemDB;User Id=CommentSystemAdmin;Password=CommentSystem!2025;TrustServerCertificate=True      
-      - ConnectionStrings__Redis=redis:6379
-      - ConnectionStrings__RabbitMQ=amqp://CommentSystemAdmin:CommentSystem!2025@rabbitmq:5672
-    depends_on:
-      - db
-      - redis
-      - rabbitmq
+      - AppOptions__ConnectionStrings__DefaultConnection=Server=db;Database=CommentSystemDB;User Id=SA;Password=CommentSystem!2025;TrustServerCertificate=True      
+      - AppOptions__Redis__Connection=redis:6379
+      - AppOptions__RabbitMQ__HostName=rabbitmq
+      - AppOptions__RabbitMQ__Port=5672
+      - AppOptions__RabbitMQ__UserName=CommentSystemAdmin
+      - AppOptions__RabbitMQ__Password=CommentSystem!2025
+      - ASPNETCORE_URLS=http://+:5000;http://+:5001
+    depends_on:   
+      fileapi: 
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      captcha_service:
+        condition: service_healthy      
     restart: always
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -f http://localhost:5000/health || curl -f http://localhost:5001/health"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
 
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -31,6 +42,12 @@ services:
     volumes:
       - mssql_data:/var/opt/mssql
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "exit 0"]
+      interval: 20s
+      retries: 5
+      start_period: 60s
+      timeout: 10s
 
   redis:
     image: redis:latest
@@ -39,14 +56,20 @@ services:
       - "6379:6379"
     command: ["redis-server"]
     restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
+      timeout: 3s
 
   rabbitmq:
     image: rabbitmq:management
     container_name: rabbitmq_server
     hostname: rabbitmq
     ports:
-      - "5672:5672"   # AMQP (для .NET)
-      - "15672:15672" # Web UI
+      - "5672:5672"
+      - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: CommentSystemAdmin
       RABBITMQ_DEFAULT_PASS: CommentSystem!2025
@@ -60,6 +83,57 @@ services:
       start_period: 10s
       timeout: 5s
 
+  captcha_service:
+    build:
+      context: .
+      dockerfile: CaptchaServiceAPI/Dockerfile
+    ports:
+      - "5004:5004"
+      - "5005:5005"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - AppOptions__Redis__Connection=redis:6379
+      - ASPNETCORE_URLS=http://+:5004;http://+:5005
+    volumes:
+      - dataprotection-keys:/root/.aspnet/DataProtection-Keys
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: always
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -f http://localhost:5004/health || curl -f http://localhost:5005/health"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+      timeout: 5s
+
+  fileapi:
+    build:
+      context: .
+      dockerfile: FileServiceAPI/Dockerfile
+    ports:
+      - "5002:5002"
+      - "5003:5003"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - AppOptions__ConnectionStrings__DefaultConnection=Server=db;Database=CommentSystemDB;User Id=SA;Password=CommentSystem!2025;TrustServerCertificate=True
+      - AppOptions__AzureBlobStorage__ConnectionString=DefaultEndpointsProtocol=https;AccountName=commentsystemstorage;AccountKey=3VXV9erOiP7q57DuRFXvE8jOtuX9TPVm2HK/fVCbfcNGcw8p5mI79DYPyQouRKRf/GIKzKYVw5qT+AStHUlQjQ==;EndpointSuffix=core.windows.net
+      - AppOptions__AzureBlobStorage__ContainerName=comment-files
+      - ASPNETCORE_URLS=http://+:5002;http://+:5003
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -f http://localhost:5002/health || curl -f http://localhost:5003/health"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+      timeout: 5s
+
 volumes:
   mssql_data:
   rabbitmq_data:
+  dataprotection-keys:

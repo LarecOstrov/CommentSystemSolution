@@ -1,34 +1,20 @@
-﻿using Microsoft.AspNetCore.SignalR;
-using CommentSystem.Messaging.Interfaces;
+﻿using Common.Models.Inputs;
+using Common.Services.Interfaces;
+using Microsoft.AspNetCore.SignalR;
 
-namespace CommentSystem.WebSockets
+namespace CommentSystem.WebSockets;
+
+internal class WebSocketHub : Hub
 {
-    public class WebSocketHub : Hub
+    private readonly ICommentService _commentService;
+
+    public WebSocketHub(ICommentService commentService)
     {
-        private readonly IRabbitMqProducer _rabbitMqProducer;
-        private readonly string _queueName;
+        _commentService = commentService;
+    }
 
-        public WebSocketHub(IRabbitMqProducer rabbitMqProducer, IConfiguration configuration)
-        {
-            _rabbitMqProducer = rabbitMqProducer;            
-            _queueName = configuration["RabbitMQ:QueueName"] ?? "comments_queue";
-        }
-
-        public async Task SendMessage(string userName, string email, string? homePage, string text)
-        {
-            var commentData = new
-            {
-                UserName = userName,
-                Email = email,
-                HomePage = homePage,
-                Text = text
-            };
-
-            // send to RabbitMQ
-            _ =_rabbitMqProducer.Publish(_queueName, commentData);
-
-            // Notify all clients
-            await Clients.All.SendAsync("ReceiveMessage", userName, text);
-        }
+    public async Task SendMessage(AddCommentInput input)
+    {
+        await _commentService.PublishCommentAsync(input);
     }
 }

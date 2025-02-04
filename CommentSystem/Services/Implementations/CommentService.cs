@@ -1,75 +1,132 @@
-﻿using CommentSystem.Models;
-using CommentSystem.Repositories.Interfaces;
-using CommentSystem.Services.Interfaces;
-using CommentSystem.Helpers;
+﻿using CommentSystem.Config;
+using Common.Messaging.Interfaces;
+using Common.Models;
+using Common.Models.DTOs;
+using Common.Models.Inputs;
+using Common.Repositories.Interfaces;
+using Common.Services.Interfaces;
+using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Options;
+using Serilog;
 using System.Text.Json;
-using CommentSystem.Models.Inputs;
 
-namespace CommentSystem.Services.Implementations
+namespace Common.Services.Implementations;
+
+internal class CommentService : ICommentService
 {
-    public class CommentService : ICommentService
+    private readonly ICommentRepository _commentRepository;
+    private readonly IDistributedCache _cache;
+    private readonly IRabbitMqProducer _rabbitMqProducer;
+    private readonly ICaptchaCacheService _captchaCacheService;
+    private readonly IValidator<AddCommentInput> _validator;
+    private readonly AppOptions _options;
+    private readonly string _queueName;
+
+    public CommentService(
+        ICommentRepository commentRepository,
+        IDistributedCache cache,
+        IRabbitMqProducer rabbitMqProducer,
+        ICaptchaCacheService captchaCacheService,
+        IValidator<AddCommentInput> validator,
+        IOptions<AppOptions> options)
     {
-        private readonly ICommentRepository _commentRepository;
-        private readonly IDistributedCache _cache;
-        private readonly CaptchaValidator _captchaValidator;
+        _commentRepository = commentRepository;
+        _cache = cache;
+        _rabbitMqProducer = rabbitMqProducer;
+        _captchaCacheService = captchaCacheService;
+        _validator = validator;
+        _options = options.Value;
+        _queueName = _options.RabbitMq.QueueName;
+    }
 
-        public CommentService(ICommentRepository commentRepository, IDistributedCache cache, CaptchaValidator captchaValidator)
+    public async Task<List<Comment>> GetAllCommentsWithSortingAndPaginationAsync(string? sortBy, bool descending, int page, int pageSize)
+    {
+        var cacheKey = $"comments_{sortBy}_{descending}_{page}_{pageSize}";
+        var cachedComments = await _cache.GetStringAsync(cacheKey);
+
+        if (!string.IsNullOrEmpty(cachedComments))
         {
-            _commentRepository = commentRepository;
-
-            _cache = cache;
-            _captchaValidator = captchaValidator;
+            return JsonSerializer.Deserialize<List<Comment>>(cachedComments)!;
         }
 
-        public async Task<List<Comment>> GetAllCommentsWithSortingAndPaginationAsync(string? sortBy, bool descending, int page, int pageSize)
+        var comments = _commentRepository.GetAll();
+
+        // Sorting
+        comments = sortBy?.ToLower() switch
         {
-            var cacheKey = $"comments_{sortBy}_{descending}_{page}_{pageSize}";
-            var cachedComments = await _cache.GetStringAsync(cacheKey);
+            "username" => descending ? comments.OrderByDescending(c => c.User.UserName) : comments.OrderBy(c => c.User.UserName),
+            "email" => descending ? comments.OrderByDescending(c => c.User.Email) : comments.OrderBy(c => c.User.Email),
+            _ => descending ? comments.OrderByDescending(c => c.CreatedAt) : comments.OrderBy(c => c.CreatedAt), // Default sorting
+        };
 
-            if (!string.IsNullOrEmpty(cachedComments))
-            {
-                return JsonSerializer.Deserialize<List<Comment>>(cachedComments)!;
-            }
+        // Pagination
+        comments = comments.Skip((page - 1) * pageSize).Take(pageSize);
 
-            var comments = _commentRepository.GetAll();
+        var commentList = await comments.ToListAsync();
 
-            // Sorting
-            comments = sortBy?.ToLower() switch
-            {
-                "username" => descending ? comments.OrderByDescending(c => c.User.UserName) : comments.OrderBy(c => c.User.UserName),
-                "email" => descending ? comments.OrderByDescending(c => c.User.Email) : comments.OrderBy(c => c.User.Email),
-                _ => descending ? comments.OrderByDescending(c => c.CreatedAt) : comments.OrderBy(c => c.CreatedAt), // Default sorting
-            };
+        await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(commentList), new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+        });
 
-            // Pagination
-            comments = comments.Skip((page - 1) * pageSize).Take(pageSize);
+        return commentList;
+    }
 
-            var commentList = await comments.ToListAsync();
-
-            await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(commentList), new DistributedCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
-            });
-
-            return commentList;
-        }        
-
-        public async Task AddCommentAsync(CommentDto input)
+    public async Task AddCommentAsync(CommentDto input)
+    {
+        try
         {
             var comment = new Comment
             {
+                Id = input.Id,
                 User = new User
                 {
                     UserName = input.UserName,
                     Email = input.Email,
                     HomePage = input.HomePage
                 },
-                Text = input.Text
+                Text = input.Text,
+                HasAttachment = input.HasAttachment
             };
 
             await _commentRepository.AddAsync(comment);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error while adding comment");
+        }
+    }
+
+    public async Task PublishCommentAsync(AddCommentInput input)
+    {
+        ValidationResult validationResult = await _validator.ValidateAsync(input);
+
+        if (!validationResult.IsValid)
+        {
+            throw new Exception(string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage)));
+        }
+
+        if (!await _captchaCacheService.ValidateCaptchaAsync(input.CaptchaKey, input.Captcha))
+        {
+            throw new Exception("Invalid CAPTCHA");
+        }
+
+        var commentData = CommentDto.FromAddCommentInput(input);
+        await _rabbitMqProducer.Publish(_queueName, commentData);
+    }
+
+    public async Task UpdateHasAttachmentAsync(Guid id, bool hasAttachment = false)
+    {
+        try
+        {
+            await _commentRepository.UpdateHasAttachmentAsync(id, hasAttachment);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error while adding comment");
         }
     }
 }

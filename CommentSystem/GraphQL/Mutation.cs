@@ -1,32 +1,31 @@
-﻿using CommentSystem.Models;
-using CommentSystem.Data;
-using CommentSystem.Services.Interfaces;
-using CommentSystem.Messaging.Interfaces;
-using CommentSystem.Models.Inputs;
-using CommentSystem.Helpers;
+﻿using Common.Models.Inputs;
+using Common.Services.Interfaces;
+using Serilog;
 
-namespace CommentSystem.GraphQL
+namespace Common.GraphQL;
+
+internal class Mutation
 {
-    public class Mutation
+    private readonly ICommentService _commentService;
+
+    public Mutation(ICommentService commentService)
     {
-        private readonly IRabbitMqProducer _rabbitMqProducer;
-        private readonly CaptchaValidator _captchaValidator;
+        _commentService = commentService;
+    }
 
-        public Mutation(IRabbitMqProducer rabbitMqProducer, CaptchaValidator captchaValidator)
+    public async Task<string> AddComment(AddCommentInput input)
+    {
+        try
         {
-            _rabbitMqProducer = rabbitMqProducer;
-            _captchaValidator = captchaValidator;
-        }
-
-        public async Task<string> AddComment(CommentDto input)
-        {
-            if (!await _captchaValidator.ValidateCaptchaAsync(input.Captcha))
-            {
-                throw new Exception("Invalid CAPTCHA");
-            }
-
-            _rabbitMqProducer.Publish("comments_queue", input);
+            await _commentService.PublishCommentAsync(input);
             return "Comment is being processed";
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error while adding comment");
+            throw ex is GraphQLException
+                ? ex
+                : new GraphQLException("Internal server error");
         }
     }
 }

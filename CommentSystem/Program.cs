@@ -1,105 +1,179 @@
-using CommentSystem.Data;
-using CommentSystem.GraphQL;
-using CommentSystem.Messaging.Consumers;
-using CommentSystem.Messaging.Interfaces;
-using CommentSystem.Messaging.Producers;
-using CommentSystem.Middleware;
-using CommentSystem.Repositories.Implementations;
-using CommentSystem.Repositories.Interfaces;
-using CommentSystem.Services.Implementations;
-using CommentSystem.Services.Interfaces;
+﻿using Common.Data;
+using Common.GraphQL;
+using Common.Messaging.Interfaces;
+using Common.Repositories.Implementations;
+using Common.Repositories.Interfaces;
+using Common.Services.Implementations;
+using Common.Services.Interfaces;
 using CommentSystem.WebSockets;
+using CommentSystem.Messaging.Consumers;
+using CommentSystem.Messaging.Producers;
 using FluentValidation;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Prometheus;
 using RabbitMQ.Client;
 using Serilog;
+using Common.Models.Inputs;
+using CommentSystem.Config;
+using Common.Middlewares;
+using Common.Extensions;
 using CommentSystem.Helpers;
-using CommentSystem.Models.Inputs;
 
 var builder = WebApplication.CreateBuilder(args);
 
-Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day)
-    .CreateLogger();
+ConfigureLogging(builder);
 
-builder.Host.UseSerilog();
+var appOptions = LoadAppOptions(builder);
+await ConfigureServicesAsync(builder.Services, appOptions);
 
-// MSSQL
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-// RabbitMQ
-var rabbitMqConfig = builder.Configuration.GetSection("RabbitMQ");
-var factory = new ConnectionFactory
-{
-    HostName = rabbitMqConfig["HostName"],
-    UserName = rabbitMqConfig["UserName"],
-    Password = rabbitMqConfig["Password"],
-    Port = int.Parse(rabbitMqConfig["Port"])
-};
-
-// Rabbit connection
-var rabbitConnection = await factory.CreateConnectionAsync();
-builder.Services.AddSingleton<IConnection>(rabbitConnection);
-builder.Services.AddSingleton<IRabbitMqProducer, RabbitMqProducer>();
-builder.Services.AddHostedService<RabbitMqConsumer>();
-
-// Repositories
-builder.Services.AddScoped<ICommentRepository, CommentRepository>();
-
-//Services
-builder.Services.AddScoped<ICommentService, CommentService>();
-
-// Helpers
-builder.Services.AddHttpClient<CaptchaValidator>();
-
-// GraphQL
-builder.Services
-    .AddGraphQLServer()
-    .AddQueryType<Query>()
-    .AddMutationType<Mutation>()
-    .AddFiltering()
-    .AddSorting()
-    .AddInstrumentation();
-builder.Services.AddValidation();
-builder.Services.AddSingleton<IValidator<CommentDto>, AddCommentInputValidator>();
-
-// Redis
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = builder.Configuration.GetConnectionString("Redis");
-    options.InstanceName = "CommentSystem_";
-});
-
-builder.Services.AddSignalR();
+builder.Services.ConfigureRateLimiting(appOptions, opts => opts.IpRateLimit);
 
 var app = builder.Build();
+await ConfigureMiddleware(app);
+app.Run();
 
-app.UseForwardedHeaders(new ForwardedHeadersOptions
+/// <summary>
+/// Configure logger
+/// </summary>
+void ConfigureLogging(WebApplicationBuilder builder)
 {
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-});
-app.UseMiddleware<RequestLoggingMiddleware>();
+    Log.Logger = new LoggerConfiguration()
+        .ReadFrom.Configuration(builder.Configuration)
+        .Enrich.FromLogContext()
+        .WriteTo.Console()
+        .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day)
+        .CreateLogger();
 
-// Auto-Migration DB for DEV
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    dbContext.Database.Migrate();
+    builder.Host.UseSerilog();
 }
 
 
-app.UseHttpMetrics();
-app.UseHttpsRedirection();
-app.UseRouting();
-app.UseAuthorization();
-app.MapHub<WebSocketHub>("/ws"); //WebSocket
-app.MapGraphQL();
-app.MapMetrics(); // Prometheus
+/// <summary>
+/// Load AppOptions from configuration
+/// </summary>
+AppOptions LoadAppOptions(WebApplicationBuilder builder)
+{
+    var appOptions = builder.Configuration.GetSection("AppOptions").Get<AppOptions>();
+    if (appOptions == null)
+    {
+        var errorMsg = "Missing AppOptions configuration in CommentSystem appsettings.json";
+        Log.Fatal(errorMsg);
+        throw new InvalidOperationException(errorMsg);
+    }
 
-app.Run();
+    builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("AppOptions"));
+    Log.Warning($"DefaultConnection: {appOptions.ConnectionStrings.DefaultConnection}");
+    return appOptions;
+}
+
+/// <summary>
+/// Register services in DI container
+/// </summary>
+async Task ConfigureServicesAsync(IServiceCollection services, AppOptions options)
+{
+    // MSSQL
+    services.AddDbContext<ApplicationDbContext>(dbOptions =>
+        dbOptions.UseSqlServer(options.ConnectionStrings.DefaultConnection));
+
+    // RabbitMQ
+    
+    var factory = new ConnectionFactory
+    {
+        HostName = options.RabbitMq.HostName,
+        UserName = options.RabbitMq.UserName,
+        Password = options.RabbitMq.Password,
+        Port = options.RabbitMq.Port
+    };
+
+    Log.Information($"Connecting to RabbitMQ at {factory.HostName}:{factory.Port}, {factory.UserName} {factory.Password}");
+    services.AddSingleton<IConnectionFactory>(factory);
+    var rabbitConnection = await factory.CreateConnectionAsync();
+    services.AddSingleton<IConnection>(rabbitConnection);
+    services.AddSingleton<IRabbitMqProducer, RabbitMqProducer>();
+    services.AddHostedService<RabbitMqConsumer>();
+
+    // Add Controllers
+    services.AddControllers();
+    // Repositories
+    services.AddScoped<ICommentRepository, CommentRepository>();
+
+    // Services
+    services.AddScoped<ICommentService, CommentService>();
+    builder.Services.AddScoped<ICaptchaCacheService, CaptchaCacheService>();
+
+    // GraphQL
+    services
+        .AddGraphQLServer()
+        .AddQueryType<Query>()
+        .AddMutationType<Mutation>()
+        .AddFiltering()
+        .AddSorting()
+        .AddInstrumentation();
+
+    services.AddValidation();
+    services.AddScoped<IValidator<AddCommentInput>, AddCommentInputValidator>();
+
+    // Redis
+    services.AddStackExchangeRedisCache(redisOptions =>
+    {
+        redisOptions.Configuration = options.Redis.Connection;
+        redisOptions.InstanceName = options.Redis.InstanceName;
+    });
+
+    services.AddSignalR();
+}
+
+/// <summary>
+/// Configure middleware and routing
+/// </summary>
+async Task ConfigureMiddleware(WebApplication app)
+{
+    // Proxing IP
+    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    });
+
+    // Request logging
+    app.UseMiddleware<RequestLoggingMiddleware>();
+    app.UseRequestLogging();
+
+    // Auto-migrate database in development
+    if (app.Environment.IsDevelopment())
+    {
+        await ApplyMigrationsAsync(app);
+    }
+
+    // Metrics and routing
+    app.UseHttpMetrics();
+    app.UseHttpsRedirection();
+    app.UseRouting();
+    app.UseAuthorization();
+    app.MapHub<WebSocketHub>("/ws"); // WebSocket
+    app.MapGraphQL();
+    app.MapMetrics(); // Prometheus
+
+    app.MapControllers();
+}
+
+/// <summary>
+/// Apply database migrations
+/// </summary>
+async Task ApplyMigrationsAsync(WebApplication app)
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+    var pendingMigrations = (await dbContext.Database.GetPendingMigrationsAsync()).ToList();
+    if (pendingMigrations.Any())
+    {
+        Log.Information("Applying {Count} pending migrations...", pendingMigrations.Count);
+        await dbContext.Database.MigrateAsync();
+        Log.Information("Database migrations applied successfully.");
+    }
+    else
+    {
+        Log.Information("No pending migrations found.");
+    }
+}
