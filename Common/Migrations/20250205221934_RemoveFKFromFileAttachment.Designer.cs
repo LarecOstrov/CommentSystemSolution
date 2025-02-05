@@ -4,6 +4,7 @@ using Common.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Common.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250205221934_RemoveFKFromFileAttachment")]
+    partial class RemoveFKFromFileAttachment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -75,6 +78,8 @@ namespace Common.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CommentId");
+
                     b.ToTable("Files");
                 });
 
@@ -121,8 +126,19 @@ namespace Common.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Common.Models.FileAttachment", b =>
+                {
+                    b.HasOne("Common.Models.Comment", null)
+                        .WithMany("Files")
+                        .HasForeignKey("CommentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Common.Models.Comment", b =>
                 {
+                    b.Navigation("Files");
+
                     b.Navigation("Replies");
                 });
 

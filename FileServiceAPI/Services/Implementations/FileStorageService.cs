@@ -4,12 +4,11 @@ using FileServiceAPI.Config;
 using FileServiceAPI.Services.Interfaces;
 using Microsoft.Extensions.Options;
 using Serilog;
-using System.Drawing;
-using System.Drawing.Imaging;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Formats.Jpeg;
 
-namespace FileServiceAPI.Services.Implementations;
-
-internal class FileStorageService : IFileStorageService
+public class FileStorageService : IFileStorageService
 {
     private readonly BlobServiceClient _blobServiceClient;
     private readonly string _containerName;
@@ -20,7 +19,6 @@ internal class FileStorageService : IFileStorageService
     private readonly int _maxImageHeight;
     private readonly AppOptions _options;
     private readonly Dictionary<string, string> _allowedMimeTypes;
-
 
     public FileStorageService(IOptions<AppOptions> options)
     {
@@ -67,21 +65,23 @@ internal class FileStorageService : IFileStorageService
     {
         try
         {
-            using var image = Image.FromStream(file.OpenReadStream());
+            using var image = await Image.LoadAsync(file.OpenReadStream());
 
             if (image.Width > _maxImageWidth || image.Height > _maxImageHeight)
             {
                 Log.Information($"Resizing image {file.FileName}...");
-                using var resizedImage = ResizeImage(image, _maxImageWidth, _maxImageHeight);
-
-                using var stream = new MemoryStream();
-                resizedImage.Save(stream, ImageFormat.Jpeg);
-                stream.Position = 0;
-
-                return await UploadToBlobWithRetryAsync(stream, file.FileName);
+                image.Mutate(x => x.Resize(new ResizeOptions
+                {
+                    Mode = ResizeMode.Max,
+                    Size = new Size(_maxImageWidth, _maxImageHeight)
+                }));
             }
 
-            return await UploadToBlobWithRetryAsync(file.OpenReadStream(), file.FileName);
+            using var stream = new MemoryStream();
+            await image.SaveAsync(stream, new JpegEncoder());
+            stream.Position = 0;
+
+            return await UploadToBlobWithRetryAsync(stream, file.FileName);
         }
         catch (Exception ex)
         {
@@ -94,7 +94,7 @@ internal class FileStorageService : IFileStorageService
     {
         if (file.Length > _maxTextFileSize)
         {
-            Log.Warning($"Text file {file.FileName} exceeds the size limit of 100 KB");
+            Log.Warning($"Text file {file.FileName} exceeds the size limit of {_maxTextFileSize} bytes");
             return null;
         }
 
@@ -140,26 +140,6 @@ internal class FileStorageService : IFileStorageService
 
         Log.Error($"File {fileName} failed to upload after {maxRetries} attempts.");
         return null;
-    }
-
-
-    private static Image ResizeImage(Image image, int maxWidth, int maxHeight)
-    {
-        double ratioX = (double)maxWidth / image.Width;
-        double ratioY = (double)maxHeight / image.Height;
-        double ratio = Math.Min(ratioX, ratioY);
-
-        int newWidth = (int)(image.Width * ratio);
-        int newHeight = (int)(image.Height * ratio);
-
-        var resized = new Bitmap(newWidth, newHeight);
-        using var graphics = Graphics.FromImage(resized);
-        graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
-        graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-        graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-        graphics.DrawImage(image, 0, 0, newWidth, newHeight);
-
-        return resized;
     }
 
     public async Task<bool> DeleteFileAsync(string fileUrl)

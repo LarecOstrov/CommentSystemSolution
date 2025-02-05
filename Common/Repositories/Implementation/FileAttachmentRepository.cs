@@ -34,16 +34,24 @@ public class FileAttachmentRepository : IFileAttachmentRepository
             .FirstOrDefaultAsync(c => c.Id == id);
     }
 
-    public async Task<bool> AddAsync(FileAttachment comment)
+    public async Task<FileAttachment> AddAsync(FileAttachment comment)
     {
         await _context.Files.AddAsync(comment);
-        return await _context.SaveChangesAsync() > 0;
+        if( await _context.SaveChangesAsync() > 0)
+        {
+            return comment;
+        }
+        throw new Exception("Failed to save file attachment");
     }
 
-    public async Task<bool> UpdateAsync(FileAttachment comment)
+    public async Task<FileAttachment> UpdateAsync(FileAttachment comment)
     {
         _context.Files.Update(comment);
-        return await _context.SaveChangesAsync() > 0;
+        if( await _context.SaveChangesAsync() > 0)
+        {
+            return comment;
+        }
+        throw new Exception("Failed to update file attachment");
     }
 
     public async Task<bool> DeleteAsync(Guid id)

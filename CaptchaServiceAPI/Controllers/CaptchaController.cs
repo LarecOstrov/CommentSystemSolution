@@ -8,7 +8,7 @@ namespace CaptchaServiceAPI.Controllers;
 
 [Route("api/captcha")]
 [ApiController]
-internal class CaptchaController : ControllerBase
+public class CaptchaController : ControllerBase
 {
     private readonly ICaptchaService _captchaService;
     private readonly ICaptchaCacheService _captchaCacheService;

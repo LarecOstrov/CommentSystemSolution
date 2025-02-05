@@ -5,6 +5,16 @@ RUN apt-get update && apt-get install -y curl
 EXPOSE 5004  
 EXPOSE 5005 
 
+# Install fonts for Captcha generation
+RUN apt-get update && apt-get install -y \
+    fontconfig \
+    libfontconfig1 \
+    libfreetype6 \
+    fonts-dejavu-core \
+    fonts-liberation \
+    && rm -rf /var/lib/apt/lists/* \
+    && fc-cache -fv
+
 # Build stage
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release

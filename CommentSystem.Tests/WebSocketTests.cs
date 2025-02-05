@@ -29,7 +29,7 @@ public class WebSocketTests
         // Act
         await _hubConnection.InvokeAsync("SendComment", "TestUser", "Hello WebSocket!");
 
-        await Task.Delay(1000); // Чекаємо на отримання повідомлення
+        await Task.Delay(1000);
 
         // Assert
         Assert.Equal("Hello WebSocket!", receivedMessage);

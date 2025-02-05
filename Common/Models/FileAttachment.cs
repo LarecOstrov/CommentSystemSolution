@@ -4,7 +4,7 @@ namespace Common.Models;
 public class FileAttachment
 {
     public Guid Id { get; set; } = Guid.NewGuid();
-    public Guid? CommentId { get; set; }
+    public required Guid CommentId { get; set; }
     public required string Url { get; set; }
     public required FileType Type { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

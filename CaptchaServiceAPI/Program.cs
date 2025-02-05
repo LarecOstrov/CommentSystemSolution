@@ -3,6 +3,8 @@ using CaptchaServiceAPI.Services.Implementations;
 using CaptchaServiceAPI.Services.Interfaces;
 using Common.Extensions;
 using Common.Middlewares;
+using Common.Services.Implementations;
+using Common.Services.Interfaces;
 using DNTCaptcha.Core;
 using Microsoft.AspNetCore.HttpOverrides;
 using Serilog;
@@ -58,6 +60,7 @@ void ConfigureServices(WebApplicationBuilder builder, AppOptions appOptions)
 {
     // Captcha Service
     builder.Services.AddScoped<ICaptchaService, CaptchaService>();
+    builder.Services.AddScoped<ICaptchaCacheService, CaptchaCacheService>();
     builder.Services.AddSingleton<ICaptchaCryptoProvider, CaptchaCryptoProvider>();
     builder.Services.AddSingleton<ICaptchaImageProvider, CaptchaImageProvider>();
 
@@ -78,7 +81,7 @@ void ConfigureServices(WebApplicationBuilder builder, AppOptions appOptions)
     // DNTCaptcha Configuration
     builder.Services.AddDNTCaptcha(options =>
     {
-        options.UseDistributedCacheStorageProvider(); // Используем Redis для хранения капчи
+        options.UseDistributedCacheStorageProvider(); // Use Distributed Cache
         options.ShowThousandsSeparators(false);
         options.WithEncryptionKey(appOptions.CaptchaSettings.EncryptionKey);
     });

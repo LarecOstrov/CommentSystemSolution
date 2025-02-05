@@ -7,6 +7,7 @@ public class AppOptions
     public required FileUploadSettingsOptions FileUploadSettings { get; init; }
     public CorsOptions Cors { get; set; } = new();
     public required int IpRateLimit { get; init; }
+    public required RedisOptions Redis { get; init; }
 }
 
 public class ConnectionStringsOptions
@@ -33,4 +34,9 @@ public class FileUploadSettingsOptions
     public required int MaxImageWidth { get; init; }
     public required int MaxImageHeight { get; init; }
     public required Dictionary<string, string> AllowedMimeTypes { get; init; }
+}
+public class RedisOptions
+{
+    public required string Connection { get; init; }
+    public required string InstanceName { get; init; }
 }

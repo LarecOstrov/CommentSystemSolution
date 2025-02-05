@@ -26,7 +26,5 @@ namespace Common.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public bool HasAttachment { get; set; } = false;
-
-        public ICollection<FileAttachment> Files { get; set; } = new List<FileAttachment>();
     }
 }

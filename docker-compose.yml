@@ -130,7 +130,7 @@ services:
       test: ["CMD", "sh", "-c", "curl -f http://localhost:5002/health || curl -f http://localhost:5003/health"]
       interval: 10s
       retries: 5
-      start_period: 10s
+      start_period: 20s
       timeout: 5s
 
 volumes:

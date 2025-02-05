@@ -19,14 +19,6 @@ public class ApplicationDbContext : DbContext
             .HasOne(c => c.User)
             .WithMany(u => u.Comments)
             .HasForeignKey(c => c.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-
-        modelBuilder.Entity<FileAttachment>()
-            .HasOne<Comment>()
-            .WithMany(c => c.Files)
-            .HasForeignKey(f => f.CommentId)
-            .IsRequired(false)
-            .OnDelete(DeleteBehavior.SetNull);
+            .OnDelete(DeleteBehavior.Cascade);       
     }
 }

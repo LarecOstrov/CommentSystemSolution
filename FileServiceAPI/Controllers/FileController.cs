@@ -10,7 +10,7 @@ namespace FileServiceAPI.Controllers;
 
 [ApiController]
 [Route("api/files")]
-internal class FileController : ControllerBase
+public class FileController : ControllerBase
 {
     private readonly IFileStorageService _fileStorageService;
     private readonly ICaptchaCacheService _captchaCacheService;
@@ -27,7 +27,7 @@ internal class FileController : ControllerBase
     }
 
     [HttpPost("upload")]
-    public async Task<IActionResult> UploadFile([FromForm] IFormFile file, Guid captchaKey, string userInput)
+    public async Task<IActionResult> UploadFile([FromForm] IFormFile file, [FromForm] Guid captchaKey, [FromForm] string userInput)
     {
         string message = "";
         try
@@ -52,12 +52,12 @@ internal class FileController : ControllerBase
 
                 if (fileUrl is not null)
                 {
-                    if (!await _fileAttachmentService.AddFileAsync(new FileAttachment
+                    if (await _fileAttachmentService.AddFileAsync(new FileAttachment
                     {
                         Url = fileUrl,
                         Type = file.ContentType.Contains("text") ? FileType.Text : FileType.Image,
                         CommentId = captchaKey
-                    }))
+                    }) == null)
                     {
                         message = "Error saving Url";
                     }

@@ -5,7 +5,7 @@ using Serilog;
 
 namespace FileServiceAPI.Services.Implementations;
 
-internal class FileAttachmentService : IFileAttachmentService
+public class FileAttachmentService : IFileAttachmentService
 {
     private readonly IFileAttachmentRepository _fileRepository;
 
@@ -24,7 +24,7 @@ internal class FileAttachmentService : IFileAttachmentService
         return await _fileRepository.GetByCommentIdAsync(commentId);
     }
 
-    public async Task<bool> AddFileAsync(FileAttachment fileAttachment)
+    public async Task<FileAttachment> AddFileAsync(FileAttachment fileAttachment)
     {
         try
         {

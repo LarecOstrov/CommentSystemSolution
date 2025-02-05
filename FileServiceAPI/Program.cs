@@ -3,6 +3,8 @@ using Common.Extensions;
 using Common.Middlewares;
 using Common.Repositories.Implementations;
 using Common.Repositories.Interfaces;
+using Common.Services.Implementations;
+using Common.Services.Interfaces;
 using FileServiceAPI.Config;
 using FileServiceAPI.Services.Implementations;
 using FileServiceAPI.Services.Interfaces;
@@ -10,8 +12,6 @@ using FileServiceAPI.Workers;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
-
-AppContext.SetSwitch("System.Drawing.EnableUnixSupport", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -73,6 +73,7 @@ void ConfigureServices(WebApplicationBuilder builder, AppOptions options)
         dbOptions.UseSqlServer(options.ConnectionStrings.DefaultConnection));
 
     // Services
+    builder.Services.AddScoped<ICaptchaCacheService, CaptchaCacheService>();
     builder.Services.AddScoped<IFileStorageService, FileStorageService>();
     builder.Services.AddScoped<IFileAttachmentService, FileAttachmentService>();
     builder.Services.AddScoped<IOrphanFileCleanupService, OrphanFileCleanupService>();
@@ -80,6 +81,7 @@ void ConfigureServices(WebApplicationBuilder builder, AppOptions options)
 
     //Repository
     builder.Services.AddScoped<IFileAttachmentRepository, FileAttachmentRepository>();
+    builder.Services.AddScoped<ICommentRepository, CommentRepository>();
 
     // Controllers
     builder.Services.AddControllers();
@@ -87,6 +89,13 @@ void ConfigureServices(WebApplicationBuilder builder, AppOptions options)
 
     //Swagger
     builder.Services.AddSwaggerGen();
+
+    // Redis Configuration for saving captcha keys and values
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = appOptions.Redis.Connection;
+        options.InstanceName = appOptions.Redis.InstanceName;
+    });
 
     // CORS Configuration
     var corsOptions = builder.Configuration.GetSection("CorsOptions").Get<CorsOptions>();

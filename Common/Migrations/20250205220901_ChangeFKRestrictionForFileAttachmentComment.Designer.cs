@@ -4,6 +4,7 @@ using Common.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Common.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250205220901_ChangeFKRestrictionForFileAttachmentComment")]
+    partial class ChangeFKRestrictionForFileAttachmentComment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -60,7 +63,7 @@ namespace Common.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("CommentId")
+                    b.Property<Guid?>("CommentId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAt")
@@ -74,6 +77,8 @@ namespace Common.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CommentId");
 
                     b.ToTable("Files");
                 });
@@ -121,8 +126,18 @@ namespace Common.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Common.Models.FileAttachment", b =>
+                {
+                    b.HasOne("Common.Models.Comment", null)
+                        .WithMany("Files")
+                        .HasForeignKey("CommentId")
+                        .OnDelete(DeleteBehavior.NoAction);
+                });
+
             modelBuilder.Entity("Common.Models.Comment", b =>
                 {
+                    b.Navigation("Files");
+
                     b.Navigation("Replies");
                 });
 
