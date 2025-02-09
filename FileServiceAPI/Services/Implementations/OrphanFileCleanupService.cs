@@ -1,5 +1,6 @@
 ﻿using Common.Models;
 using Common.Repositories.Interfaces;
+using Common.Services.Interfaces;
 using FileServiceAPI.Services.Interfaces;
 using Serilog;
 
@@ -21,7 +22,7 @@ internal class OrphanFileCleanupService : IOrphanFileCleanupService
     {
         Log.Information("Starting orphan file cleanup...");
 
-        var oldFiles = await _fileRepository.GetOrphanFilesAsync(TimeSpan.FromHours(1));
+        var oldFiles = await _fileRepository.GetOrphanFilesAsync(TimeSpan.FromDays(30));
         var successDeleted = new List<FileAttachment>();
         foreach (var file in oldFiles)
         {

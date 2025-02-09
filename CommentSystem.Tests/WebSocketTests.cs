@@ -1,7 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.SignalR.Client;
-using Xunit;
+﻿using Microsoft.AspNetCore.SignalR.Client;
 
 public class WebSocketTests
 {
@@ -19,7 +16,7 @@ public class WebSocketTests
     {
         // Arrange
         await _hubConnection.StartAsync();
-        string receivedMessage = null;
+        string? receivedMessage = null;
 
         _hubConnection.On<string, string>("ReceiveComment", (user, text) =>
         {

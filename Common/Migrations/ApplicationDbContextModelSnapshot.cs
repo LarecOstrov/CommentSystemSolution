@@ -31,9 +31,6 @@ namespace Common.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("HasAttachment")
-                        .HasColumnType("bit");
-
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("uniqueidentifier");
 
@@ -51,7 +48,7 @@ namespace Common.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Comments");
+                    b.ToTable("Comments", (string)null);
                 });
 
             modelBuilder.Entity("Common.Models.FileAttachment", b =>
@@ -75,7 +72,9 @@ namespace Common.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Files");
+                    b.HasIndex("CommentId");
+
+                    b.ToTable("Files", (string)null);
                 });
 
             modelBuilder.Entity("Common.Models.User", b =>
@@ -89,7 +88,7 @@ namespace Common.Migrations
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("HomePage")
                         .HasColumnType("nvarchar(max)");
@@ -101,7 +100,10 @@ namespace Common.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users");
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("Common.Models.Comment", b =>
@@ -121,8 +123,21 @@ namespace Common.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Common.Models.FileAttachment", b =>
+                {
+                    b.HasOne("Common.Models.Comment", "Comment")
+                        .WithMany("FileAttachments")
+                        .HasForeignKey("CommentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Comment");
+                });
+
             modelBuilder.Entity("Common.Models.Comment", b =>
                 {
+                    b.Navigation("FileAttachments");
+
                     b.Navigation("Replies");
                 });
 

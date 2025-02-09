@@ -1,4 +1,12 @@
 ﻿
+x-environment: &common-environment
+  ASPNETCORE_ENVIRONMENT: Development
+  AppOptions__Redis__Connection: redis:6379
+  AppOptions__RabbitMq__HostName: rabbitmq
+  AppOptions__RabbitMq__Port: 5672
+  AppOptions__RabbitMq__UserName: CommentSystemAdmin
+  AppOptions__RabbitMq__Password: CommentSystem!2025  
+
 services:
   app:
     build:
@@ -8,27 +16,29 @@ services:
       - "5000:5000"
       - "5001:5001"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - AppOptions__ConnectionStrings__DefaultConnection=Server=db;Database=CommentSystemDB;User Id=SA;Password=CommentSystem!2025;TrustServerCertificate=True      
-      - AppOptions__Redis__Connection=redis:6379
-      - AppOptions__RabbitMQ__HostName=rabbitmq
-      - AppOptions__RabbitMQ__Port=5672
-      - AppOptions__RabbitMQ__UserName=CommentSystemAdmin
-      - AppOptions__RabbitMQ__Password=CommentSystem!2025
-      - ASPNETCORE_URLS=http://+:5000;http://+:5001
-    depends_on:   
-      fileapi: 
+      <<: *common-environment
+      AppOptions__AzureBlobStorage__ConnectionString: "DefaultEndpointsProtocol=https;AccountName=commentsystemstorage;AccountKey=3VXV9erOiP7q57DuRFXvE8jOtuX9TPVm2HK/fVCbfcNGcw8p5mI79DYPyQouRKRf/GIKzKYVw5qT+AStHUlQjQ==;EndpointSuffix=core.windows.net"
+      AppOptions__AzureBlobStorage__ContainerName: "comment-files"
+      AppOptions__ConnectionStrings__DefaultConnection: "Server=db;Database=CommentSystemDB;User Id=SA;Password=CommentSystem!2025;TrustServerCertificate=True"
+      ASPNETCORE_URLS: http://+:5000;http://+:5001
+    depends_on:
+      db:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+      comment_consumer:
+        condition: service_healthy
       captcha_service:
-        condition: service_healthy      
+        condition: service_healthy
     restart: always
     healthcheck:
       test: ["CMD", "sh", "-c", "curl -f http://localhost:5000/health || curl -f http://localhost:5001/health"]
-      interval: 10s
+      interval: 30s
       retries: 5
-      timeout: 5s
+      timeout: 10s
+      start_period: 20s
 
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -46,8 +56,8 @@ services:
       test: ["CMD-SHELL", "exit 0"]
       interval: 20s
       retries: 5
-      start_period: 60s
       timeout: 10s
+      start_period: 20s
 
   redis:
     image: redis:latest
@@ -60,7 +70,6 @@ services:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       retries: 5
-      start_period: 10s
       timeout: 3s
 
   rabbitmq:
@@ -71,8 +80,9 @@ services:
       - "5672:5672"
       - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: CommentSystemAdmin
-      RABBITMQ_DEFAULT_PASS: CommentSystem!2025
+       <<: *common-environment
+       RABBITMQ_DEFAULT_USER: CommentSystemAdmin
+       RABBITMQ_DEFAULT_PASS: CommentSystem!2025
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     restart: always
@@ -80,8 +90,27 @@ services:
       test: ["CMD", "rabbitmqctl", "status"]
       interval: 10s
       retries: 5
-      start_period: 10s
+      start_period: 20s
       timeout: 5s
+
+  comment_consumer:
+    build:
+      context: .
+      dockerfile: CommentConsumerService/Dockerfile
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      <<: *common-environment
+    restart: always
+    healthcheck:
+      test: ["CMD", "sh", "-c", "pgrep -f 'dotnet CommentConsumerService.dll' || exit 1"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
+      start_period: 20s
+    deploy:
+      replicas: 1
 
   captcha_service:
     build:
@@ -91,9 +120,8 @@ services:
       - "5004:5004"
       - "5005:5005"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - AppOptions__Redis__Connection=redis:6379
-      - ASPNETCORE_URLS=http://+:5004;http://+:5005
+      <<: *common-environment
+      ASPNETCORE_URLS: http://+:5004;http://+:5005
     volumes:
       - dataprotection-keys:/root/.aspnet/DataProtection-Keys
     depends_on:
@@ -104,34 +132,8 @@ services:
       test: ["CMD", "sh", "-c", "curl -f http://localhost:5004/health || curl -f http://localhost:5005/health"]
       interval: 10s
       retries: 5
-      start_period: 10s
       timeout: 5s
-
-  fileapi:
-    build:
-      context: .
-      dockerfile: FileServiceAPI/Dockerfile
-    ports:
-      - "5002:5002"
-      - "5003:5003"
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - AppOptions__ConnectionStrings__DefaultConnection=Server=db;Database=CommentSystemDB;User Id=SA;Password=CommentSystem!2025;TrustServerCertificate=True
-      - AppOptions__AzureBlobStorage__ConnectionString=DefaultEndpointsProtocol=https;AccountName=commentsystemstorage;AccountKey=3VXV9erOiP7q57DuRFXvE8jOtuX9TPVm2HK/fVCbfcNGcw8p5mI79DYPyQouRKRf/GIKzKYVw5qT+AStHUlQjQ==;EndpointSuffix=core.windows.net
-      - AppOptions__AzureBlobStorage__ContainerName=comment-files
-      - ASPNETCORE_URLS=http://+:5002;http://+:5003
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: always
-    healthcheck:
-      test: ["CMD", "sh", "-c", "curl -f http://localhost:5002/health || curl -f http://localhost:5003/health"]
-      interval: 10s
-      retries: 5
       start_period: 20s
-      timeout: 5s
 
 volumes:
   mssql_data:

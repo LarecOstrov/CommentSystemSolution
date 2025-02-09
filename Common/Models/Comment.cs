@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace Common.Models
 {
@@ -15,7 +16,7 @@ namespace Common.Models
 
         [ForeignKey("ParentId")]
         public Comment? Parent { get; set; }
-
+        [JsonIgnore]
         public List<Comment> Replies { get; set; } = new();
 
         public Guid UserId { get; set; }
@@ -25,6 +26,6 @@ namespace Common.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        public bool HasAttachment { get; set; } = false;
+        public List<FileAttachment>? FileAttachments { get; set; } = null;
     }
 }

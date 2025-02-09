@@ -8,14 +8,7 @@ services:
      - ~/.vsdbg:/root/.vsdbg:rw
      - ./src:/app/src:cached
     #command: tail -f /dev/null
-
-  fileapi:
-    environment:
-      - DOTNET_USE_POLLING_FILE_WATCHER=1
-    volumes:
-     - ~/.vsdbg:/root/.vsdbg:rw
-     - ./src:/app/src:cached
-    #command: tail -f /dev/null
+  
 
   captcha_service:
     environment:

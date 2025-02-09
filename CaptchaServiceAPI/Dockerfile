@@ -23,6 +23,7 @@ WORKDIR /src
 # 1. Copy only project files for dependency restore
 COPY CaptchaServiceAPI/CaptchaServiceAPI.csproj CaptchaServiceAPI/
 COPY Common/Common.csproj Common/
+COPY Common/appsettings.json /app/appsettings.json
 
 # 2. Restore dependencies
 RUN dotnet restore CaptchaServiceAPI/CaptchaServiceAPI.csproj

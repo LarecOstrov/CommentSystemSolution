@@ -13,15 +13,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CaptchaServiceAPI", "CaptchaServiceAPI\CaptchaServiceAPI.csproj", "{872DD0E4-F036-4F0F-A6A2-4210452D0418}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileServiceAPI", "FileServiceAPI\FileServiceAPI.csproj", "{53C94B83-0922-44C0-B0D1-0F78A2C785E1}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Common.csproj", "{4E3BB7CD-F280-447A-B7D0-15F60D3100D9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommentSystem.Tests", "CommentSystem.Tests\CommentSystem.Tests.csproj", "{2DA26442-CE5A-407C-886D-AB94297E1768}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CaptchaServiceAPI.Tests", "CaptchaServiceAPI.Tests\CaptchaServiceAPI.Tests.csproj", "{46F2A867-9E5A-4868-8E23-9150E9A23F39}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileServiceAPI.Tests", "FileServiceAPI.Tests\FileServiceAPI.Tests.csproj", "{6A20AADA-4B3F-42A3-9ADD-7448705A3F6E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommentConsumerService", "CommentConsumerService\CommentConsumerService.csproj", "{F021E25D-E27F-44E5-BFD2-2397774E7223}"
+	ProjectSection(ProjectDependencies) = postProject
+		{4E3BB7CD-F280-447A-B7D0-15F60D3100D9} = {4E3BB7CD-F280-447A-B7D0-15F60D3100D9}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -37,10 +38,6 @@ Global
 		{872DD0E4-F036-4F0F-A6A2-4210452D0418}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{872DD0E4-F036-4F0F-A6A2-4210452D0418}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{872DD0E4-F036-4F0F-A6A2-4210452D0418}.Release|Any CPU.Build.0 = Release|Any CPU
-		{53C94B83-0922-44C0-B0D1-0F78A2C785E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{53C94B83-0922-44C0-B0D1-0F78A2C785E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{53C94B83-0922-44C0-B0D1-0F78A2C785E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{53C94B83-0922-44C0-B0D1-0F78A2C785E1}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4E3BB7CD-F280-447A-B7D0-15F60D3100D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4E3BB7CD-F280-447A-B7D0-15F60D3100D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4E3BB7CD-F280-447A-B7D0-15F60D3100D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -53,10 +50,10 @@ Global
 		{46F2A867-9E5A-4868-8E23-9150E9A23F39}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{46F2A867-9E5A-4868-8E23-9150E9A23F39}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{46F2A867-9E5A-4868-8E23-9150E9A23F39}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6A20AADA-4B3F-42A3-9ADD-7448705A3F6E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6A20AADA-4B3F-42A3-9ADD-7448705A3F6E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6A20AADA-4B3F-42A3-9ADD-7448705A3F6E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6A20AADA-4B3F-42A3-9ADD-7448705A3F6E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F021E25D-E27F-44E5-BFD2-2397774E7223}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F021E25D-E27F-44E5-BFD2-2397774E7223}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F021E25D-E27F-44E5-BFD2-2397774E7223}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F021E25D-E27F-44E5-BFD2-2397774E7223}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

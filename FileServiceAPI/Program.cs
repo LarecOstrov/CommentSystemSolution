@@ -1,11 +1,12 @@
-﻿using Common.Data;
+﻿using Common.Config;
+using Common.Data;
 using Common.Extensions;
+using Common.Helpers;
 using Common.Middlewares;
 using Common.Repositories.Implementations;
 using Common.Repositories.Interfaces;
 using Common.Services.Implementations;
 using Common.Services.Interfaces;
-using FileServiceAPI.Config;
 using FileServiceAPI.Services.Implementations;
 using FileServiceAPI.Services.Interfaces;
 using FileServiceAPI.Workers;
@@ -17,10 +18,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 ConfigureLogging(builder);
 
-var appOptions = LoadAppOptions(builder);
+var appOptions = LoadAppOptionsHelper.LoadAppOptions();
 ConfigureServices(builder, appOptions);
 
-builder.Services.ConfigureRateLimiting(appOptions, opts => opts.IpRateLimit);
+builder.Services.ConfigureRateLimiting(appOptions, opts => opts.IpRateLimit.FileService);
 
 var app = builder.Build();
 await ConfigureMiddleware(app, appOptions);
@@ -43,31 +44,12 @@ void ConfigureLogging(WebApplicationBuilder builder)
     builder.Host.UseSerilog();
 }
 
-
-/// <summary>
-/// Load AppOptions from configuration
-/// </summary>
-AppOptions LoadAppOptions(WebApplicationBuilder builder)
-{
-    var appOptions = builder.Configuration.GetSection("AppOptions").Get<AppOptions>();
-    if (appOptions == null)
-    {
-        var errorMsg = "Missing AppOptions configuration in FileServiceAPI appsettings.json";
-        Log.Fatal(errorMsg);
-        throw new InvalidOperationException(errorMsg);
-    }
-
-    builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("AppOptions"));
-    Log.Warning($"DefaultConnection: {appOptions.ConnectionStrings.DefaultConnection}");
-    return appOptions;
-}
-
 /// <summary>
 /// Register services in DI container
 /// </summary>
 void ConfigureServices(WebApplicationBuilder builder, AppOptions options)
 {
-    
+
     // MSSQL
     builder.Services.AddDbContext<ApplicationDbContext>(dbOptions =>
         dbOptions.UseSqlServer(options.ConnectionStrings.DefaultConnection));
@@ -98,13 +80,13 @@ void ConfigureServices(WebApplicationBuilder builder, AppOptions options)
     });
 
     // CORS Configuration
-    var corsOptions = builder.Configuration.GetSection("CorsOptions").Get<CorsOptions>();
+    var corsOptions = appOptions.Cors;
     builder.Services.AddCors(options =>
     {
-        if (corsOptions?.AllowedOrigins?.Any() == true)
+        if (corsOptions?.FileService.AllowedOrigins?.Any() == true)
         {
             options.AddPolicy("AllowSpecificOrigins", builder =>
-                builder.WithOrigins(corsOptions.AllowedOrigins)
+                builder.WithOrigins(corsOptions.FileService.AllowedOrigins)
                     .AllowAnyMethod()
                     .AllowAnyHeader());
         }
@@ -135,7 +117,7 @@ async Task ConfigureMiddleware(WebApplication app, AppOptions appOptions)
     // Auto-migrate database in development
     if (app.Environment.IsDevelopment())
     {
-        await ApplyMigrationsAsync(app);
+        await MigrationHelper.ApplyMigrationsAsync(app, appOptions);
     }
     // Swagger for development
     {
@@ -144,29 +126,8 @@ async Task ConfigureMiddleware(WebApplication app, AppOptions appOptions)
     }
 
     // Enable CORS
-    app.UseCors(appOptions.Cors.AllowedOrigins.Any() ? "AllowSpecificOrigins" : "AllowAll");
+    app.UseCors(appOptions.Cors.FileService.AllowedOrigins.Any() ? "AllowSpecificOrigins" : "AllowAll");
 
     app.UseAuthorization();
     app.MapControllers();
-}
-
-/// <summary>
-/// Apply database migrations
-/// </summary>
-async Task ApplyMigrationsAsync(WebApplication app)
-{
-    using var scope = app.Services.CreateScope();
-    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-    var pendingMigrations = (await dbContext.Database.GetPendingMigrationsAsync()).ToList();
-    if (pendingMigrations.Any())
-    {
-        Log.Information("Applying {Count} pending migrations...", pendingMigrations.Count);
-        await dbContext.Database.MigrateAsync();
-        Log.Information("Database migrations applied successfully.");
-    }
-    else
-    {
-        Log.Information("No pending migrations found.");
-    }
 }

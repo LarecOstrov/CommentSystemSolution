@@ -6,7 +6,7 @@ namespace FileServiceAPI.Workers;
 internal class OrphanFileCleanupWorker : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly TimeSpan _cleanupInterval = TimeSpan.FromHours(6); // Раз в 6 часов
+    private readonly TimeSpan _cleanupInterval = TimeSpan.FromHours(24); // Once a day
 
     public OrphanFileCleanupWorker(IServiceScopeFactory scopeFactory)
     {

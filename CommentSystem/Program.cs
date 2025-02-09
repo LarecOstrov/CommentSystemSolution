@@ -5,9 +5,8 @@ using Common.Repositories.Implementations;
 using Common.Repositories.Interfaces;
 using Common.Services.Implementations;
 using Common.Services.Interfaces;
-using CommentSystem.WebSockets;
-using CommentSystem.Messaging.Consumers;
-using CommentSystem.Messaging.Producers;
+using Common.WebSockets;
+using Common.Messaging.Producers;
 using FluentValidation;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
@@ -15,22 +14,24 @@ using Prometheus;
 using RabbitMQ.Client;
 using Serilog;
 using Common.Models.Inputs;
-using CommentSystem.Config;
+using Common.Config;
 using Common.Middlewares;
 using Common.Extensions;
-using CommentSystem.Helpers;
+using Common.Helpers;
+using Common.Repositories.Implementation;
+using Common.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load AppOptions from Common
+var appOptions = LoadAppOptionsHelper.LoadAppOptions(builder);
+
 ConfigureLogging(builder);
 
-var appOptions = LoadAppOptions(builder);
 await ConfigureServicesAsync(builder.Services, appOptions);
 
-builder.Services.ConfigureRateLimiting(appOptions, opts => opts.IpRateLimit);
-
 var app = builder.Build();
-await ConfigureMiddleware(app);
+await ConfigureMiddleware(app, appOptions);
 app.Run();
 
 /// <summary>
@@ -48,36 +49,17 @@ void ConfigureLogging(WebApplicationBuilder builder)
     builder.Host.UseSerilog();
 }
 
-
-/// <summary>
-/// Load AppOptions from configuration
-/// </summary>
-AppOptions LoadAppOptions(WebApplicationBuilder builder)
-{
-    var appOptions = builder.Configuration.GetSection("AppOptions").Get<AppOptions>();
-    if (appOptions == null)
-    {
-        var errorMsg = "Missing AppOptions configuration in CommentSystem appsettings.json";
-        Log.Fatal(errorMsg);
-        throw new InvalidOperationException(errorMsg);
-    }
-
-    builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("AppOptions"));
-    Log.Warning($"DefaultConnection: {appOptions.ConnectionStrings.DefaultConnection}");
-    return appOptions;
-}
-
 /// <summary>
 /// Register services in DI container
 /// </summary>
 async Task ConfigureServicesAsync(IServiceCollection services, AppOptions options)
 {
     // MSSQL
+    Log.Information($"Connection MSSQL: {options.ConnectionStrings.DefaultConnection}");
     services.AddDbContext<ApplicationDbContext>(dbOptions =>
         dbOptions.UseSqlServer(options.ConnectionStrings.DefaultConnection));
 
     // RabbitMQ
-    
     var factory = new ConnectionFactory
     {
         HostName = options.RabbitMq.HostName,
@@ -91,28 +73,41 @@ async Task ConfigureServicesAsync(IServiceCollection services, AppOptions option
     var rabbitConnection = await factory.CreateConnectionAsync();
     services.AddSingleton<IConnection>(rabbitConnection);
     services.AddSingleton<IRabbitMqProducer, RabbitMqProducer>();
-    services.AddHostedService<RabbitMqConsumer>();
 
     // Add Controllers
-    services.AddControllers();
+    services.AddControllers()
+        .AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+        });
     // Repositories
     services.AddScoped<ICommentRepository, CommentRepository>();
+    services.AddScoped<IUserRepository, UserRepository>();
+    services.AddScoped<IFileAttachmentRepository, FileAttachmentRepository>();
 
     // Services
     services.AddScoped<ICommentService, CommentService>();
-    builder.Services.AddScoped<ICaptchaCacheService, CaptchaCacheService>();
+    services.AddScoped<ICaptchaCacheService, CaptchaCacheService>();
+    services.AddScoped<IFileStorageService, FileStorageService>();
+    services.AddScoped<IFileAttachmentService, FileAttachmentService>();
 
     // GraphQL
     services
-        .AddGraphQLServer()
-        .AddQueryType<Query>()
-        .AddMutationType<Mutation>()
-        .AddFiltering()
-        .AddSorting()
-        .AddInstrumentation();
+    .AddGraphQLServer()
+    .AddQueryType<Query>()
+    .AddType<Comment>()
+    .AddType<User>()
+    .AddType<FileAttachment>()
+    .AddFiltering()
+    .AddSorting()
+    .AddInstrumentation()
+    .AddProjections()
+    .ModifyRequestOptions(opt => opt.IncludeExceptionDetails = true);
+
+    services.AddScoped<Query>();
 
     services.AddValidation();
-    services.AddScoped<IValidator<AddCommentInput>, AddCommentInputValidator>();
+    services.AddScoped<IValidator<CommentInput>, AddCommentInputHelper>();
 
     // Redis
     services.AddStackExchangeRedisCache(redisOptions =>
@@ -122,12 +117,31 @@ async Task ConfigureServicesAsync(IServiceCollection services, AppOptions option
     });
 
     services.AddSignalR();
+
+    // CORS Configuration
+    var corsOptions = options.Cors;
+    services.AddCors(options =>
+    {
+        if (corsOptions?.CommentService.AllowedOrigins?.Any() == true)
+        {
+            options.AddPolicy("AllowSpecificOrigins", builder =>
+                builder.WithOrigins(corsOptions.CommentService.AllowedOrigins)
+                    .AllowAnyMethod()
+                    .AllowAnyHeader());
+        }
+        else
+        {
+            Log.Warning("CORS is misconfigured: No allowed origins specified.");
+            options.AddPolicy("AllowAll",
+                builder => builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+        }
+    });
 }
 
 /// <summary>
 /// Configure middleware and routing
 /// </summary>
-async Task ConfigureMiddleware(WebApplication app)
+async Task ConfigureMiddleware(WebApplication app, AppOptions appOptions)
 {
     // Proxing IP
     app.UseForwardedHeaders(new ForwardedHeadersOptions
@@ -142,7 +156,7 @@ async Task ConfigureMiddleware(WebApplication app)
     // Auto-migrate database in development
     if (app.Environment.IsDevelopment())
     {
-        await ApplyMigrationsAsync(app);
+        await MigrationHelper.ApplyMigrationsAsync(app, appOptions);
     }
 
     // Metrics and routing
@@ -154,26 +168,8 @@ async Task ConfigureMiddleware(WebApplication app)
     app.MapGraphQL();
     app.MapMetrics(); // Prometheus
 
+    // Enable CORS
+    app.UseCors(appOptions.Cors.CommentService.AllowedOrigins.Any() ? "AllowSpecificOrigins" : "AllowAll");
+
     app.MapControllers();
-}
-
-/// <summary>
-/// Apply database migrations
-/// </summary>
-async Task ApplyMigrationsAsync(WebApplication app)
-{
-    using var scope = app.Services.CreateScope();
-    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-    var pendingMigrations = (await dbContext.Database.GetPendingMigrationsAsync()).ToList();
-    if (pendingMigrations.Any())
-    {
-        Log.Information("Applying {Count} pending migrations...", pendingMigrations.Count);
-        await dbContext.Database.MigrateAsync();
-        Log.Information("Database migrations applied successfully.");
-    }
-    else
-    {
-        Log.Information("No pending migrations found.");
-    }
 }

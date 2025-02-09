@@ -1,5 +1,7 @@
 ﻿using Common.Services.Interfaces;
+using Microsoft.AspNetCore.Builder.Extensions;
 using Microsoft.Extensions.Caching.Distributed;
+using Serilog;
 
 namespace Common.Services.Implementations;
 
@@ -18,13 +20,22 @@ public class CaptchaCacheService : ICaptchaCacheService
         {
             return false;
         }
-
         var expectedCaptcha = await _cache.GetStringAsync(captchaKey.ToString());
         if (expectedCaptcha is not null && expectedCaptcha.Equals(userInput, StringComparison.OrdinalIgnoreCase))
         {
+            await RemoveCaptchaAsync(captchaKey);
             return true;
         }
         return false;
+    }
+
+    public async Task AddCaptchaAsync(Guid captchaKey, string captchaText, int lifeTimeMinutes)
+    {
+         
+        await _cache.SetStringAsync(captchaKey.ToString(), captchaText, new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(lifeTimeMinutes)
+        });
     }
 
     public async Task RemoveCaptchaAsync(Guid captchaKey)

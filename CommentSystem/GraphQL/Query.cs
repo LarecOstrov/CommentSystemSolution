@@ -1,28 +1,33 @@
 ﻿using Common.Models;
-using Common.Services.Interfaces;
+using Common.Repositories.Interfaces;
 using Serilog;
 
 namespace Common.GraphQL;
 
-internal class Query
+public class Query
 {
-    internal readonly ICommentService _commentService;
+    private readonly ICommentRepository _commentRepository;
 
-    public Query(ICommentService commentService)
+    public Query(ICommentRepository commentRepository)
     {
-        _commentService = commentService;
+        _commentRepository = commentRepository;
     }
 
-    public async Task<List<Comment>> GetComments(string? sortBy = null, bool descending = true, int page = 1, int pageSize = 25)
+    [UsePaging]
+    [UseProjection]
+    [UseFiltering]
+    [UseSorting]
+    public IQueryable<Comment> GetComments()
     {
         try
         {
-            return await _commentService.GetAllCommentsWithSortingAndPaginationAsync(sortBy, descending, page, pageSize);
+            //TODO: add cache
+            return _commentRepository.GetAll();
         }
         catch (Exception ex)
         {
-            Log.Error(ex, $"Error while getting comments: sortBy - {sortBy}, descending - {descending}, page - {page}, pageSize - {pageSize}");
-            return new List<Comment>();
+            Log.Error(ex.Message);
+            throw new GraphQLException($"Failed to get comments {ex.Message}");
         }
     }
 }

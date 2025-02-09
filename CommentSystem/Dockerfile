@@ -13,6 +13,7 @@ WORKDIR /src
 # 1. Copy only project files for dependency restore
 COPY CommentSystem/CommentSystem.csproj CommentSystem/
 COPY Common/Common.csproj Common/
+COPY Common/appsettings.json /app/appsettings.json
 
 # 2. Restore dependencies
 RUN dotnet restore CommentSystem/CommentSystem.csproj

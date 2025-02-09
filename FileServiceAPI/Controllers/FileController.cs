@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using FileServiceAPI.Services.Interfaces;
 using Common.Services.Interfaces;
 using Common.Enums;
 using Common.Models;
 using Common.Repositories.Interfaces;
 using Serilog;
+using FileServiceAPI.Services.Interfaces;
 
 namespace FileServiceAPI.Controllers;
 

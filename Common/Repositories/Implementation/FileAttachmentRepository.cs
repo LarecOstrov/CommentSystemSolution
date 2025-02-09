@@ -44,6 +44,16 @@ public class FileAttachmentRepository : IFileAttachmentRepository
         throw new Exception("Failed to save file attachment");
     }
 
+    public async Task<List<FileAttachment>> AddManyAsync(List<FileAttachment> comments)
+    {
+        await _context.Files.AddRangeAsync(comments);
+        if (await _context.SaveChangesAsync() > 0)
+        {
+            return comments;
+        }
+        throw new Exception("Failed to save files attachment");
+    }
+
     public async Task<FileAttachment> UpdateAsync(FileAttachment comment)
     {
         _context.Files.Update(comment);

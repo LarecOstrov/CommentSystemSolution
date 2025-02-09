@@ -19,6 +19,7 @@ public class CommentRepository : ICommentRepository
         return _context.Comments
             .Include(c => c.Replies)
             .Include(c => c.User)
+            .Include(c => c.FileAttachments)
             .AsQueryable();
     }
 
@@ -59,20 +60,5 @@ public class CommentRepository : ICommentRepository
             return await _context.SaveChangesAsync() > 0;
         }
         return false;
-    }
-
-    public async Task<bool> UpdateHasAttachmentAsync(Guid id, bool hasAttachment)
-    {
-        var comment = await _context.Comments
-            .FirstOrDefaultAsync(c => c.Id == id);
-
-        if (comment is not null)
-        {
-            comment.HasAttachment = hasAttachment;
-            _context.Comments.Update(comment);
-            return await _context.SaveChangesAsync() > 0;
-        }
-        return false;
-
-    }
+    }    
 }
