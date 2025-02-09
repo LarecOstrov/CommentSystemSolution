@@ -1,18 +1,26 @@
-﻿using CaptchaServiceAPI.Config;
+﻿using Common.Config;
 using CaptchaServiceAPI.Services.Implementations;
 using CaptchaServiceAPI.Services.Interfaces;
 using Common.Extensions;
 using Common.Middlewares;
+using Common.Services.Implementations;
+using Common.Services.Interfaces;
 using DNTCaptcha.Core;
 using Microsoft.AspNetCore.HttpOverrides;
 using Serilog;
+using Common.Helpers;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Завантаження загальної конфігурації AppOptions
+
+var appOptions = LoadAppOptionsHelper.LoadAppOptions(builder);
+
 ConfigureLogging(builder);
-var appOptions = LoadAppOptions(builder);
 ConfigureServices(builder, appOptions);
-builder.Services.ConfigureRateLimiting(appOptions, opts => opts.IpRateLimit);
+
+builder.Services.ConfigureRateLimiting(appOptions, opts => opts.IpRateLimit.CaptchaService);
 
 var app = builder.Build();
 ConfigureMiddleware(app, appOptions);
@@ -35,29 +43,13 @@ void ConfigureLogging(WebApplicationBuilder builder)
 }
 
 /// <summary>
-/// Load AppOptions 
-/// </summary>
-AppOptions LoadAppOptions(WebApplicationBuilder builder)
-{
-    var appOptions = builder.Configuration.GetSection("AppOptions").Get<AppOptions>();
-    if (appOptions == null)
-    {
-        var errorMsg = "Missing AppOptions configuration in CaptchaServiceAPI appsettings.json";
-        Log.Fatal(errorMsg);
-        throw new InvalidOperationException(errorMsg);
-    }
-
-    builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("AppOptions"));
-    return appOptions;
-}
-
-/// <summary>
 /// Register services in DI container
 /// </summary>
 void ConfigureServices(WebApplicationBuilder builder, AppOptions appOptions)
 {
     // Captcha Service
     builder.Services.AddScoped<ICaptchaService, CaptchaService>();
+    builder.Services.AddScoped<ICaptchaCacheService, CaptchaCacheService>();
     builder.Services.AddSingleton<ICaptchaCryptoProvider, CaptchaCryptoProvider>();
     builder.Services.AddSingleton<ICaptchaImageProvider, CaptchaImageProvider>();
 
@@ -78,19 +70,19 @@ void ConfigureServices(WebApplicationBuilder builder, AppOptions appOptions)
     // DNTCaptcha Configuration
     builder.Services.AddDNTCaptcha(options =>
     {
-        options.UseDistributedCacheStorageProvider(); // Используем Redis для хранения капчи
+        options.UseDistributedCacheStorageProvider(); // Use Distributed Cache
         options.ShowThousandsSeparators(false);
         options.WithEncryptionKey(appOptions.CaptchaSettings.EncryptionKey);
     });
 
     // CORS Configuration
-    var corsOptions = builder.Configuration.GetSection("CorsOptions").Get<CorsOptions>();
+    var corsOptions = appOptions.Cors;
     builder.Services.AddCors(options =>
     {
-        if (corsOptions?.AllowedOrigins?.Any() == true)
+        if (corsOptions?.CaptchaService.AllowedOrigins?.Any() == true)
         {
             options.AddPolicy("AllowSpecificOrigins", builder =>
-                builder.WithOrigins(corsOptions.AllowedOrigins)
+                builder.WithOrigins(corsOptions.CaptchaService.AllowedOrigins)
                     .AllowAnyMethod()
                     .AllowAnyHeader());
         }
@@ -126,7 +118,7 @@ void ConfigureMiddleware(WebApplication app, AppOptions appOptions)
     }
 
     // Enable CORS
-    app.UseCors(appOptions.Cors.AllowedOrigins.Any() ? "AllowSpecificOrigins" : "AllowAll");
+    app.UseCors(appOptions.Cors.CaptchaService.AllowedOrigins.Any() ? "AllowSpecificOrigins" : "AllowAll");
 
     app.UseAuthorization();
     app.MapControllers();

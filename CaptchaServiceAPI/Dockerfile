@@ -5,6 +5,16 @@ RUN apt-get update && apt-get install -y curl
 EXPOSE 5004  
 EXPOSE 5005 
 
+# Install fonts for Captcha generation
+RUN apt-get update && apt-get install -y \
+    fontconfig \
+    libfontconfig1 \
+    libfreetype6 \
+    fonts-dejavu-core \
+    fonts-liberation \
+    && rm -rf /var/lib/apt/lists/* \
+    && fc-cache -fv
+
 # Build stage
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
@@ -13,6 +23,7 @@ WORKDIR /src
 # 1. Copy only project files for dependency restore
 COPY CaptchaServiceAPI/CaptchaServiceAPI.csproj CaptchaServiceAPI/
 COPY Common/Common.csproj Common/
+COPY Common/appsettings.json /app/appsettings.json
 
 # 2. Restore dependencies
 RUN dotnet restore CaptchaServiceAPI/CaptchaServiceAPI.csproj

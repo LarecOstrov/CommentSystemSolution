@@ -1,9 +1,10 @@
 ﻿using Microsoft.Extensions.Caching.Distributed;
 using DNTCaptcha.Core;
 using CaptchaServiceAPI.Services.Interfaces;
-using CaptchaServiceAPI.Config;
+using Common.Config;
 using Microsoft.Extensions.Options;
 using Serilog;
+using Common.Services.Interfaces;
 
 namespace CaptchaServiceAPI.Services.Implementations;
 
@@ -12,18 +13,20 @@ internal class CaptchaService : ICaptchaService
     private readonly IDistributedCache _cache;
     private readonly ICaptchaCryptoProvider _captchaCryptoProvider;
     private readonly ICaptchaImageProvider _captchaImageProvider;
+    private readonly ICaptchaCacheService _captchaCacheService;
     private readonly CaptchaSettings _captchaSettings;
 
     public CaptchaService(
         IDistributedCache cache,
         ICaptchaCryptoProvider captchaCryptoProvider,
         ICaptchaImageProvider captchaImageProvider,
-        IOptions<AppOptions> options)
+        IOptions<AppOptions> options, ICaptchaCacheService captchaCacheService)
     {
         _cache = cache;
         _captchaCryptoProvider = captchaCryptoProvider;
         _captchaImageProvider = captchaImageProvider;
         _captchaSettings = options.Value.CaptchaSettings;
+        _captchaCacheService = captchaCacheService;
     }
 
     public async Task<(byte[], Guid)> GenerateCaptchaAsync()
@@ -57,10 +60,7 @@ internal class CaptchaService : ICaptchaService
                 // Generate captcha key
                 Guid captchaKey = Guid.NewGuid();
 
-                await _cache.SetStringAsync(captchaKey.ToString(), captchaText, new DistributedCacheEntryOptions
-                {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_captchaSettings.LifeTimeMinutes)
-                });
+                await _captchaCacheService.AddCaptchaAsync(captchaKey, captchaText, _captchaSettings.LifeTimeMinutes);
 
                 return (captchaImageBytes, captchaKey);
             }

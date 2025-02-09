@@ -9,9 +9,10 @@ public class CommentDto
     public required string Email { get; set; }
     public string? HomePage { get; set; }
     public required string Text { get; set; }
-    public required bool HasAttachment { get; set; } = false;
+    public Guid? ParentId { get; set; } = null;
+    public List<string>? FileAttachmentUrls { get; set; } = null;
 
-    public static CommentDto FromAddCommentInput(AddCommentInput input)
+    public static CommentDto FromCommentInput(CommentInput input, List<string>? fileAttachmentUrls = null)
     {
         return new CommentDto
         {
@@ -20,7 +21,8 @@ public class CommentDto
             Email = input.Email,
             HomePage = input.HomePage,
             Text = input.Text,
-            HasAttachment = input.HasAttachment
+            ParentId = input.ParentId,
+            FileAttachmentUrls = fileAttachmentUrls
         };
     }
 }

@@ -12,8 +12,12 @@ public class ApplicationDbContext : DbContext
     public DbSet<Comment> Comments { get; set; }
     public DbSet<FileAttachment> Files { get; set; }
 
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.Email)
+            .IsUnique();
 
         modelBuilder.Entity<Comment>()
             .HasOne(c => c.User)
@@ -21,12 +25,10 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey(c => c.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
-
         modelBuilder.Entity<FileAttachment>()
-            .HasOne<Comment>()
-            .WithMany(c => c.Files)
-            .HasForeignKey(f => f.CommentId)
-            .IsRequired(false)
-            .OnDelete(DeleteBehavior.SetNull);
+            .HasOne(c => c.Comment)
+            .WithMany(u => u.FileAttachments)
+            .HasForeignKey(c => c.CommentId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
