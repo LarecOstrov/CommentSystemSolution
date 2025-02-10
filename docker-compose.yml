@@ -6,6 +6,8 @@ x-environment: &common-environment
   AppOptions__RabbitMq__Port: 5672
   AppOptions__RabbitMq__UserName: CommentSystemAdmin
   AppOptions__RabbitMq__Password: CommentSystem!2025  
+  AppOptions__ConnectionStrings__DefaultConnection: "Server=db;Database=CommentSystemDB;User Id=SA;Password=CommentSystem!2025;TrustServerCertificate=True"
+
 
 services:
   app:
@@ -19,7 +21,6 @@ services:
       <<: *common-environment
       AppOptions__AzureBlobStorage__ConnectionString: "DefaultEndpointsProtocol=https;AccountName=commentsystemstorage;AccountKey=3VXV9erOiP7q57DuRFXvE8jOtuX9TPVm2HK/fVCbfcNGcw8p5mI79DYPyQouRKRf/GIKzKYVw5qT+AStHUlQjQ==;EndpointSuffix=core.windows.net"
       AppOptions__AzureBlobStorage__ContainerName: "comment-files"
-      AppOptions__ConnectionStrings__DefaultConnection: "Server=db;Database=CommentSystemDB;User Id=SA;Password=CommentSystem!2025;TrustServerCertificate=True"
       ASPNETCORE_URLS: http://+:5000;http://+:5001
     depends_on:
       db:
