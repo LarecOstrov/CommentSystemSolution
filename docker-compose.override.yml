@@ -10,7 +10,7 @@ services:
     #command: tail -f /dev/null
   
 
-  captcha_service:
+  captcha:
     environment:
       - DOTNET_USE_POLLING_FILE_WATCHER=1
     volumes:

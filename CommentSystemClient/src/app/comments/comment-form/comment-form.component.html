@@ -1,0 +1,33 @@
+
+<form [formGroup]="commentForm" (ngSubmit)="submitComment()">
+    <label for="userName">User Name:</label>
+    <input id="userName" formControlName="userName" required />
+    <div *NgIf="commentForm.get('userName')?.invalid && commentForm.get('userName')?.touched">
+      Invalid username!
+    </div>
+  
+    <label for="email">Email:</label>
+    <input id="email" formControlName="email" type="email" required />
+    <div *NgIf="commentForm.get('email')?.invalid && commentForm.get('email')?.touched">
+      Invalid email format!
+    </div>
+  
+    <label for="homePage">Home Page:</label>
+    <input id="homePage" formControlName="homePage" type="url" />
+  
+    <label for="text">Comment:</label>
+    <textarea id="text" formControlName="text" required></textarea>
+  
+    <label for="captchaKey">Captcha Key:</label>
+    <input id="captchaKey" formControlName="captchaKey" type="text" required />
+  
+    <label for="captcha">Captcha:</label>
+    <input id="captcha" formControlName="captcha" type="text" required />
+  
+    <label for="fileAttachments">Attachments:</label>
+    <input id="fileAttachments" type="file" (change)="onFileSelected($event)" multiple />
+  
+    <button type="submit" [disabled]="commentForm.invalid">Submit</button>
+  </form>
+
+
