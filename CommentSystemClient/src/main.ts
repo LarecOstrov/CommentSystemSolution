@@ -8,4 +8,7 @@ fetch('/assets/environment.json')
     (window as any).env = env;
     bootstrapApplication(AppComponent, appConfig)
       .catch((err) => console.error(err));
+  })
+  .catch((error) => {
+    console.error("Error loading environment.json", error);
   });
