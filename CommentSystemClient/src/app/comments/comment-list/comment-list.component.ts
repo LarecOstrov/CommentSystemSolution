@@ -1,65 +1,118 @@
-import { Component, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit } from '@angular/core';
 import { Apollo, gql } from 'apollo-angular';
-import { CommentFormComponent } from '../comment-form/comment-form.component';
-
-const GET_COMMENTS = gql`
-query {
-  comments(where: { parentId: { eq: null } }) {
-    nodes {
-      id
-      text
-      createdAt
-      user {
-        userName
-        createdAt
-      }
-    }
-  }
-}
-
-`;
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-comment-list',
   templateUrl: './comment-list.component.html',
   styleUrls: ['./comment-list.component.scss'],
   standalone: true,
-  imports: [CommonModule, CommentFormComponent],
+  imports: [CommonModule],
 })
-export class CommentListComponent {
-  @Input() comments: any[] = [];
-
-  isFormVisible = false;
-  selectedParentId: string | null = null;
+export class CommentListComponent implements OnInit {
+  comments: any[] = [];
+  currentPage = 1;
+  pageSize = 25;
+  totalComments = 0;
+  totalPages = 0;
+  hasNextPage = true;
+  afterCursor: string | null = null; // cursor for pagination
+  sortBy = 'createdAt';
+  sortOrder = 'DESC';
 
   constructor(private apollo: Apollo) {}
 
   ngOnInit() {
-    if (!this.comments || this.comments.length === 0) {
-      this.apollo.watchQuery({ query: GET_COMMENTS }).valueChanges.subscribe(({ data }: any) => {
-        this.comments = data.comments;
+    this.fetchComments();
+  }
+
+  fetchComments() {
+    const GET_COMMENTS = gql`
+      query getComments(
+        $first: Int!,
+        $after: String,
+        $sort: [CommentSortInput!],
+        $where: CommentFilterInput
+      ) {
+        comments(first: $first, after: $after, order: $sort, where: $where) {
+          nodes {
+            id
+            text
+            createdAt
+            user {
+              userName
+              email
+              homePage
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          totalCount
+        }
+      }
+    `;
+
+
+    this.apollo
+      .watchQuery({
+        query: GET_COMMENTS,
+        variables: {
+          first: this.pageSize,
+          after: this.afterCursor,
+          sort: [{ path: this.sortBy, direction: this.sortOrder }], 
+          where: { parentId: null }, 
+        },
+      })
+      .valueChanges.subscribe(({ data }: any) => {
+        this.comments = data.comments.nodes || [];
+        this.totalComments = data.comments.totalCount;
+        this.totalPages = Math.ceil(this.totalComments / this.pageSize);
+        this.hasNextPage = data.comments.pageInfo.hasNextPage;
+        this.afterCursor = data.comments.pageInfo.endCursor || null; 
       });
+  }
+
+  nextPage() {
+    if (this.hasNextPage) {
+      this.currentPage++;
+      this.fetchComments();
     }
   }
 
-  openCommentForm(parentId: string | null) {
-    this.selectedParentId = parentId;
-    this.isFormVisible = true;
-  }
-
-  closeCommentForm() {
-    this.isFormVisible = false;
-    this.selectedParentId = null;
-  }
-
-  onCommentAdded(newComment: any) {
-    if (this.selectedParentId) {
-      const parentComment = this.comments.find(c => c.id === this.selectedParentId);
-      parentComment.replies.push(newComment);
-    } else {
-      this.comments.unshift(newComment);
+  previousPage() {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+      this.afterCursor = null; 
+      this.fetchComments();
     }
-    this.closeCommentForm();
   }
+
+  goToFirstPage() {
+    this.currentPage = 1;
+    this.afterCursor = null; 
+    this.fetchComments();
+  }
+
+ 
+  goToLastPage() {
+    this.currentPage = this.totalPages;
+    this.fetchComments();
+  }
+
+  animateScrollUp() {
+    const container = document.querySelector('.comment-stream');
+    if (container) {
+      container.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  toggleReplies(commentId: string) {
+    const comment = this.comments.find(c => c.id === commentId);
+    if (comment) {
+      comment.showReplies = !comment.showReplies;
+    }
+  }
+  
 }

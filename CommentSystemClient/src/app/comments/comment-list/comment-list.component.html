@@ -1,33 +1,23 @@
 <div class="comments-container">
-    <!-- Say button for new coment -->
-    <button class="say-button" (click)="openCommentForm(null)">Say</button>
-  
-    <!-- Form for new coment -->
-    <app-comment-form 
-      *ngIf="isFormVisible"
-      [parentId]="selectedParentId"
-      (commentAdded)="onCommentAdded($event)"
-      (cancel)="closeCommentForm()">
-    </app-comment-form>
-  
-    <!-- Comment list -->
+  <div class="comment-stream">
     <div *ngFor="let comment of comments" class="comment-card">
       <div class="comment-header">
         <img src="assets/avatar.png" alt="Avatar" class="comment-avatar" />
         <div>
-          <strong>{{ comment.userName }}</strong>
+          <strong>{{ comment.user?.userName }}</strong>
           <span class="comment-date">{{ comment.createdAt | date:'dd.MM.yy HH:mm' }}</span>
         </div>
       </div>
       <p class="comment-text">{{ comment.text }}</p>
-      
-      <!-- Reply button -->
-      <button class="reply-button" (click)="openCommentForm(comment.id)">Reply</button>
-  
-      <!-- Replies -->
-      <div *ngIf="comment.replies?.length" class="replies">
-        <app-comment-list [comments]="comment.replies"></app-comment-list>
-      </div>
     </div>
   </div>
-  
+
+  <!-- Paging -->
+  <div class="pagination">
+    <button (click)="goToFirstPage()" [disabled]="currentPage === 1">⏮ First</button>
+    <button (click)="previousPage()" [disabled]="currentPage === 1">◀ Prev</button>
+    <span>Page {{ currentPage }} of {{ totalPages }}</span>
+    <button (click)="nextPage()" [disabled]="!hasNextPage">Next ▶</button>
+    <button (click)="goToLastPage()" [disabled]="!hasNextPage">Last ⏭</button>
+  </div>
+</div>

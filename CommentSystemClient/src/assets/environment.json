@@ -1,5 +1,5 @@
 {
-  "addCommentRest": "http://localhost:5000/api/comments",
+  "addCommentRest": "http://localhost:5000/api/comments/",
   "getCommentsGraphQL": "http://localhost:5000/graphql",
-  "getCaptchaRest": "http://localhost:5004/api/captcha"
+  "getCaptchaRest": "http://localhost:5004/api/captcha/generate"
 }

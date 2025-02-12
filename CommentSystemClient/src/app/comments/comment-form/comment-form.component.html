@@ -1,4 +1,17 @@
-<form [formGroup]="commentForm" (ngSubmit)="requestCaptcha()" class="comment-form">
+<!-- Кнопка "Say" -->
+<button *ngIf="!isFormVisible" (click)="requestCaptcha()">Say</button>
+
+
+<form *ngIf="isFormVisible" [formGroup]="commentForm" (ngSubmit)="submitComment()" class="comment-form">
+  <div *ngIf="isLoadingCaptcha" class="loading">Loading CAPTCHA...</div>
+
+  <!-- CAPTCHA -->
+  <div *ngIf="captchaImage && !isLoadingCaptcha" class="captcha-container">
+    <img [src]="captchaImage" alt="Captcha" />
+    <input id="captcha" formControlName="captcha" placeholder="Enter CAPTCHA" required />
+  </div>
+
+  <!-- Поля вводу -->
   <div class="form-group">
     <input id="userName" formControlName="userName" placeholder="User Name" required />
     <input id="email" formControlName="email" type="email" placeholder="Email" required />
@@ -7,19 +20,30 @@
 
   <textarea id="text" formControlName="text" placeholder="Write your comment..." required></textarea>
 
+  <!-- HTML панель -->
+  <div class="toolbar">
+    <button type="button" (click)="insertTag('i')">[i]</button>
+    <button type="button" (click)="insertTag('strong')">[strong]</button>
+    <button type="button" (click)="insertTag('code')">[code]</button>
+    <button type="button" (click)="insertTag('a')">[a]</button>
+  </div>
+
+  <!-- Завантаження файлів -->
   <div class="attachments">
     <label>Attachments:</label>
-    <input id="fileAttachments" type="file" (change)="onFileSelected($event)" multiple />
+    <input id="fileAttachments" type="file" (change)="onFileSelected($event)" multiple accept="image/jpeg,image/png,image/gif,text/plain" />
+    <p *ngIf="selectedFiles.length >= 6" class="error">Max 6 files allowed.</p>
   </div>
 
-  <button type="button" (click)="requestCaptcha()" [disabled]="commentForm.invalid">Next</button>
-
-  <!-- Captcha -->
-  <div *ngIf="captchaImage" class="captcha-container">
-    <img [src]="captchaImage" alt="Captcha" />
-    <input id="captcha" formControlName="captcha" placeholder="Enter CAPTCHA" required />
-    <button type="submit" [disabled]="commentForm.invalid">Submit</button>
+  <!-- Попередній перегляд -->
+  <div class="preview">
+    <div *ngFor="let file of previewFiles">
+      <img *ngIf="file.type.includes('image')" [src]="file.url" (click)="openLightbox(file.url)" />
+      <a *ngIf="file.type.includes('text')" href="{{ file.url }}" target="_blank">Preview TXT</a>
+    </div>
   </div>
 
+  <!-- Кнопки -->
+  <button type="submit" [disabled]="commentForm.invalid">Submit</button>
   <button type="button" (click)="cancelForm()">Cancel</button>
 </form>

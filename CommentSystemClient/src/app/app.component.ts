@@ -5,11 +5,38 @@ import { CommentListComponent } from './comments/comment-list/comment-list.compo
 
 @Component({
   selector: 'app-root',
-  standalone: true,
-  imports: [CommonModule, CommentFormComponent, CommentListComponent],
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss']
+  styleUrls: ['./app.component.scss'],
+  standalone: true,
+  imports: [CommonModule, CommentFormComponent, CommentListComponent], 
 })
 export class AppComponent {
   title = 'Speaking Room';
+  sortBy = 'createdAt';
+  sortOrder: 'ASC' | 'DESC' = 'DESC';
+  isCommentFormVisible = false;
+
+  sortByCreatedAt() {
+    this.sortBy = 'createdAt';
+    this.sortOrder = 'DESC';
+  }
+
+  sortByUserName() {
+    this.sortBy = 'userName';
+    this.sortOrder = 'ASC';
+  }
+
+  sortByEmail() {
+    this.sortBy = 'email';
+    this.sortOrder = 'ASC';
+  }
+
+  toggleSortOrder() {
+    this.sortOrder = this.sortOrder === 'ASC' ? 'DESC' : 'ASC';
+  }
+
+  toggleCommentForm() {
+    this.isCommentFormVisible = !this.isCommentFormVisible;
+
+  }
 }

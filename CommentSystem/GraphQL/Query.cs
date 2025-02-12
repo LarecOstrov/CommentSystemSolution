@@ -13,7 +13,7 @@ public class Query
         _commentRepository = commentRepository;
     }
 
-    [UsePaging]
+    [UsePaging (IncludeTotalCount = true, MaxPageSize = 25)]
     [UseProjection]
     [UseFiltering]
     [UseSorting]

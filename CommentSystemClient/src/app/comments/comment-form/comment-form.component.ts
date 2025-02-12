@@ -17,10 +17,13 @@ export class CommentFormComponent {
 
   commentForm: FormGroup;
   selectedFiles: File[] = [];
-  apiUrl = (window as any).env?.addCommentRest || 'http://localhost:5000/api/comments';
+  previewFiles: any[] = [];
+  isFormVisible = false;
+  isLoadingCaptcha = false;
   captchaImage: string | null = null;
-  captchaKey: string | null = null;
-
+  apiUrl = (window as any).env?.addCommentRest || 'http://localhost:5000/api/comments';
+  captchaUrl = (window as any).env?.getCaptchaRest || 'http://localhost:5004/api/captcha';
+  
   constructor(private fb: FormBuilder, private http: HttpClient) { 
     this.commentForm = this.fb.group({
       userName: ['', [Validators.required, Validators.pattern(/^[a-zA-Z0-9]+$/)]],
@@ -32,32 +35,68 @@ export class CommentFormComponent {
     });
   }
 
-  onFileSelected(event: any) {
-    if (event.target.files.length > 0) {
-      this.selectedFiles = Array.from(event.target.files);
-    }
-  }
-
   requestCaptcha() {
-    if (this.commentForm.invalid) return;
-
-    this.http.get('http://localhost:5000/api/captcha').subscribe({
+    this.isLoadingCaptcha = true;
+    this.http.get(this.captchaUrl).subscribe({
       next: (response: any) => {
-        this.captchaImage = response.image;  // Get CAPTCHA image
-        this.captchaKey = response.key;
+        this.captchaImage = response.image;
         this.commentForm.patchValue({ captchaKey: response.key });
+        this.isLoadingCaptcha = false;
+        this.isFormVisible = true;
       },
-      error: (error) => {
+      error: () => {
         alert('Failed to load CAPTCHA.');
+        this.isLoadingCaptcha = false;
       }
     });
   }
 
-  submitComment() {
-    if (this.commentForm.invalid) {
-      alert('Check the entered data!');
+  insertTag(tag: string) {
+    const textControl = this.commentForm.get('text');
+    if (textControl) {
+      const selection = `[${tag}]${textControl.value}[/${tag}]`;
+      textControl.setValue(selection);
+    }
+  }
+
+  onFileSelected(event: any) {
+    if (event.target.files.length + this.selectedFiles.length > 6) {
+      alert('Maximum 6 files allowed.');
       return;
     }
+
+    const files: File[] = Array.from(event.target.files);
+
+    files.forEach(file => {
+      if (file.size > 100 * 1024) {
+        alert(`File ${file.name} is too large. Max 100KB allowed.`);
+        return;
+      }
+
+      if (!file.type.includes('image') && !file.type.includes('text/plain')) {
+        alert(`File ${file.name} is not supported. Only images (JPG, PNG, GIF) and TXT files are allowed.`);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        this.previewFiles.push({ type: file.type, url: e.target.result });
+      };
+      reader.readAsDataURL(file);
+
+      this.selectedFiles.push(file);
+    });
+  }
+
+  openLightbox(imageUrl: string) {
+    const lightbox = window.open('', '_blank');
+    if (lightbox) {
+      lightbox.document.write(`<img src="${imageUrl}" style="width:100%; max-width:800px;" />`);
+    }
+  }
+
+  submitComment() {
+    if (this.commentForm.invalid) return;
 
     const formData = new FormData();
     Object.keys(this.commentForm.value).forEach((key) => {
@@ -65,7 +104,7 @@ export class CommentFormComponent {
     });
 
     if (this.parentId) {
-      formData.append('parentId', this.parentId); // Add parent ID for replies
+      formData.append('parentId', this.parentId);
     }
 
     this.selectedFiles.forEach((file) => {
@@ -78,7 +117,8 @@ export class CommentFormComponent {
         this.commentAdded.emit(response);
         this.commentForm.reset();
         this.selectedFiles = [];
-        this.captchaImage = null; // Hide CAPTCHA after successful submission
+        this.captchaImage = null;
+        this.isFormVisible = false;
       },
       error: (error: HttpErrorResponse) => {
         alert(`Error: ${error.error}`);
@@ -88,6 +128,7 @@ export class CommentFormComponent {
 
   cancelForm() {
     this.cancel.emit();
-    this.captchaImage = null; // ✅ Закриваємо капчу при скасуванні
+    this.captchaImage = null;
+    this.isFormVisible = false;
   }
 }
