@@ -2,21 +2,27 @@
   <div class="content">
     <h1>Speaking Room</h1>
 
-    <!-- Filters and "Say" -->
-    <div class="filters">
-      <button (click)="sortByCreatedAt()">Sort by Date</button>
-      <button (click)="sortByUserName()">Sort by User Name</button>
-      <button (click)="sortByEmail()">Sort by Email</button>
-      <button (click)="toggleSortOrder()">
-        {{ sortOrder === 'ASC' ? '🔼 Ascending' : '🔽 Descending' }}
-      </button>
-      <button (click)="toggleCommentForm()" class="say-button">Say</button>      
-    </div>
+    <!-- Фільтри та "Say" -->
+     <div class="filters-container">
+      <div class="filters">
+        <button class="sortButton" [class.active]="sortBy === 'createdAt'" 
+          (click)="sortByCreatedAt();">{{sortBy != 'createdAt' ? '' : sortOrder === 'ASC' ? '⬆' : '⬇' }} Date</button>
+  
+        <button class="sortButton" [class.active]="sortBy === 'userName'" 
+          (click)="sortByUserName();">{{sortBy != 'userName' ? '' : sortOrder === 'ASC' ? '⬆' : '⬇' }} User</button>
+  
+        <button class="sortButton" [class.active]="sortBy === 'email'" 
+          (click)="sortByEmail();">{{ sortBy != 'email' ? '' : sortOrder === 'ASC' ? '⬆' : '⬇' }} Email</button>
+        
+        <button (click)="toggleCommentForm()"  class="say-button" [class.active]="!isCommentFormVisible">Say</button>
+      </div>
+     </div>
+    
 
-    <!-- Comment form -->
-    <app-comment-form *ngIf="isCommentFormVisible"></app-comment-form>
+    <!-- Форма коментаря -->
+    <app-comment-form *ngIf="isCommentFormVisible" (closeForm)="isCommentFormVisible = false"></app-comment-form>
 
-    <!-- Comment list -->
+    <!-- Список коментарів -->
     <app-comment-list></app-comment-list>
   </div>
 </main>

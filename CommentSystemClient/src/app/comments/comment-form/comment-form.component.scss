@@ -13,10 +13,10 @@
   .form-group {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 10px;
+    margin-bottom: 20px;
   
     input {
-      width: 32%;
+      width: 28,5%;
       padding: 8px;
       border: 1px solid #ccc;
       border-radius: 5px;
@@ -24,7 +24,7 @@
   }
   
   textarea {
-    width: 100%;
+    width: 96,5%;
     height: 120px;
     padding: 10px;
     border: 1px solid #ccc;
@@ -37,14 +37,23 @@
   }
   
   button {
-    background: #007bff;
+    background: #a8acb1;
     color: white;
-    padding: 10px;
+    padding: 5px;
     border: none;
     border-radius: 5px;
     cursor: pointer;
     margin-top: 10px;
+    margin-right: 5px;
   }
+
+  .requestCaptchaButton {
+    
+    margin-top: 0px;
+    margin-right: 5px;
+  }
+
+  
   
   button:disabled {
     background: #ccc;
@@ -52,21 +61,30 @@
   
   .captcha-container {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     margin-top: 15px;
   
     img {
       border-radius: 5px;
-      margin-bottom: 10px;
+      margin-top: 5px;
+      margin-right: 10px;
     }
   
     input {
-      padding: 8px;
+      
+      padding: 5px;
       border: 1px solid #ccc;
       border-radius: 5px;
-      width: 100%;
-      margin-bottom: 10px;
+      width: 20%;
+      margin-top: 5px;
+    }
+    
+    button{
+      padding: 5px;
+      padding-inline: 10px;
+      margin-top: 5px;
+      margin-right: 10px;
     }
   }
   

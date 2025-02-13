@@ -94,21 +94,6 @@ async Task ConfigureServicesAsync(IServiceCollection services, AppOptions option
     // GraphQL
     services
     .AddGraphQLServer()
-    .ModifyRequestOptions(opt =>
-    {
-        opt.IncludeExceptionDetails = true; 
-        opt.ExecutionTimeout = TimeSpan.FromSeconds(30); 
-    })
-    .ModifyOptions(opt =>
-    {
-        opt.StrictValidation = true; 
-    })
-    .UseRequest(next => async context =>
-    {
-        var complexity = context.ContextData.TryGetValue("query-complexity", out var value) ? value : "Unknown";
-        Console.WriteLine($"GraphQL Query Complexity: {complexity}");
-        await next(context);
-    })
     .AddQueryType<Query>()
     .AddType<Comment>()
     .AddType<User>()

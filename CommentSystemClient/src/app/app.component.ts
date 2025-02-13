@@ -16,19 +16,34 @@ export class AppComponent {
   sortOrder: 'ASC' | 'DESC' = 'DESC';
   isCommentFormVisible = false;
 
-  sortByCreatedAt() {
-    this.sortBy = 'createdAt';
-    this.sortOrder = 'DESC';
+  sortByCreatedAt() {  
+    if (this.sortBy === 'createdAt') {
+      this.toggleSortOrder();
+    }  
+    else{
+      this.sortBy = 'createdAt';
+      this.sortOrder = 'DESC';
+    }
   }
 
   sortByUserName() {
-    this.sortBy = 'userName';
-    this.sortOrder = 'ASC';
+    if (this.sortBy === 'userName') {
+      this.toggleSortOrder();
+    }
+    else{
+      this.sortBy = 'userName';
+      this.sortOrder = 'ASC';
+    }
   }
 
   sortByEmail() {
-    this.sortBy = 'email';
-    this.sortOrder = 'ASC';
+    if (this.sortBy === 'email') {
+      this.toggleSortOrder();
+    }
+    else{
+      this.sortBy = 'email';
+      this.sortOrder = 'ASC';
+    }    
   }
 
   toggleSortOrder() {
@@ -39,4 +54,6 @@ export class AppComponent {
     this.isCommentFormVisible = !this.isCommentFormVisible;
 
   }
+
+  
 }

@@ -18,8 +18,9 @@ export class CommentFormComponent {
   commentForm: FormGroup;
   selectedFiles: File[] = [];
   previewFiles: any[] = [];
-  isFormVisible = false;
+  isFormVisible = true;
   isLoadingCaptcha = false;
+  isAtachemntsInputVisible = false;
   captchaImage: string | null = null;
   apiUrl = (window as any).env?.addCommentRest || 'http://localhost:5000/api/comments';
   captchaUrl = (window as any).env?.getCaptchaRest || 'http://localhost:5004/api/captcha';
@@ -33,22 +34,32 @@ export class CommentFormComponent {
       captchaKey: [null],
       captcha: ['', [Validators.required, Validators.minLength(5)]],
     });
+
+    this.requestCaptcha();
   }
 
-  requestCaptcha() {
+  requestCaptcha() {    
     this.isLoadingCaptcha = true;
     this.http.get(this.captchaUrl).subscribe({
       next: (response: any) => {
         this.captchaImage = response.image;
         this.commentForm.patchValue({ captchaKey: response.key });
         this.isLoadingCaptcha = false;
-        this.isFormVisible = true;
+        
       },
       error: () => {
         alert('Failed to load CAPTCHA.');
         this.isLoadingCaptcha = false;
       }
     });
+  }
+
+  toggleAttachmentsInput() {
+    if (this.isAtachemntsInputVisible) {
+      this.isAtachemntsInputVisible = false;
+    } else {
+      this.isAtachemntsInputVisible = true;
+    }
   }
 
   insertTag(tag: string) {
