@@ -93,7 +93,7 @@ async Task ConfigureServicesAsync(IServiceCollection services, AppOptions option
 
     // GraphQL
     services
-    .AddGraphQLServer()
+    .AddGraphQLServer()    
     .AddQueryType<Query>()
     .AddType<Comment>()
     .AddType<User>()
@@ -102,7 +102,8 @@ async Task ConfigureServicesAsync(IServiceCollection services, AppOptions option
     .AddSorting()
     .AddInstrumentation()
     .AddProjections()
-    .ModifyRequestOptions(opt => opt.IncludeExceptionDetails = true);
+    .ModifyRequestOptions(opt => opt.IncludeExceptionDetails = true)
+    .ModifyCostOptions(opt => opt.EnforceCostLimits = false);
 
     services.AddScoped<Query>();
 

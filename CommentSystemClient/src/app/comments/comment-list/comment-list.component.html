@@ -2,10 +2,10 @@
   <div class="comment-stream">
     <div *ngFor="let comment of comments" class="comment-card">
       <div class="comment-header">
-        <img src="assets/avatar.png" alt="Avatar" class="comment-avatar" />
+        <img src="assets/img/plugs/avatar.png" alt="Avatar" class="comment-avatar" />
         <div>
-          <strong>{{ comment.user?.userName }}</strong>
-          <span class="comment-date">{{ comment.createdAt | date:'dd.MM.yy HH:mm' }}</span>
+          <strong>{{ comment.user?.userName }} </strong>
+          <span class="comment-date"> {{ comment.createdAt | date:'dd.MM.yy HH:mm' }}</span>
         </div>
       </div>
       <p class="comment-text">{{ comment.text }}</p>

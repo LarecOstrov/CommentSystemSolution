@@ -43,6 +43,9 @@
   </div>
 
   <!-- Кнопки -->
-  <button type="submit" [disabled]="commentForm.invalid">Submit</button>
-  <button type="button" (click)="cancelForm()">Cancel</button>
+  <div class="sendbar">
+    <button type="submit"  (click)="submitComment()">Submit</button>
+    <button type="button" (click)="cancelForm()">Cancel</button>
+  </div>
+  
 </form>

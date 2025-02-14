@@ -107,7 +107,11 @@ export class CommentFormComponent {
   }
 
   submitComment() {
-    if (this.commentForm.invalid) return;
+    if (this.commentForm.invalid)
+    {
+      alert('Please fill in all required fields.');
+      return;
+    }
 
     const formData = new FormData();
     Object.keys(this.commentForm.value).forEach((key) => {

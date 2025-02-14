@@ -12,7 +12,7 @@ import { CommonModule } from '@angular/common';
 export class CommentListComponent implements OnInit {
   comments: any[] = [];
   currentPage = 1;
-  pageSize = 25;
+  pageSize = 2;
   totalComments = 0;
   totalPages = 0;
   hasNextPage = true;
@@ -53,16 +53,15 @@ export class CommentListComponent implements OnInit {
         }
       }
     `;
-
-
+  
     this.apollo
       .watchQuery({
         query: GET_COMMENTS,
         variables: {
           first: this.pageSize,
           after: this.afterCursor,
-          sort: [{ path: this.sortBy, direction: this.sortOrder }], 
-          where: { parentId: null }, 
+          sort: [{ createdAt: this.sortOrder }], 
+          where: { parentId: { eq: null } },  
         },
       })
       .valueChanges.subscribe(({ data }: any) => {
@@ -70,7 +69,7 @@ export class CommentListComponent implements OnInit {
         this.totalComments = data.comments.totalCount;
         this.totalPages = Math.ceil(this.totalComments / this.pageSize);
         this.hasNextPage = data.comments.pageInfo.hasNextPage;
-        this.afterCursor = data.comments.pageInfo.endCursor || null; 
+        this.afterCursor = data.comments.pageInfo.endCursor || null;
       });
   }
 

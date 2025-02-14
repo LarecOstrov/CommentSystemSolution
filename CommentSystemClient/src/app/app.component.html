@@ -13,7 +13,8 @@
   
         <button class="sortButton" [class.active]="sortBy === 'email'" 
           (click)="sortByEmail();">{{ sortBy != 'email' ? '' : sortOrder === 'ASC' ? '⬆' : '⬇' }} Email</button>
-        
+      </div>
+      <div class="filters">
         <button (click)="toggleCommentForm()"  class="say-button" [class.active]="!isCommentFormVisible">Say</button>
       </div>
      </div>
