@@ -19,8 +19,18 @@ public class AddCommentInputHelper : AbstractValidator<CommentInput>
         RuleFor(x => x.Text)
             .NotEmpty().WithMessage("Text is required.")
             .MaximumLength(500)
-            .Must(text => SanitizeInputHelper.ClearText(text) == text)
-            .WithMessage("Text contains invalid characters.");
+            .Must(text =>
+            {
+                var sanitizedText = SanitizeInputHelper.ClearText(text);
+
+                return sanitizedText.Replace("\r\n", "\n") == text.Replace("\r\n", "\n");
+            })
+            .WithMessage(x =>
+            {
+                var sanitizedText = SanitizeInputHelper.ClearText(x.Text);
+                var invalidChars = x.Text.Except(sanitizedText).Distinct();
+                return $"Text contains invalid characters: {string.Join(", ", invalidChars)}";
+            });
 
         RuleFor(x => x.Captcha)
             .NotEmpty().WithMessage("Captcha is required.");

@@ -24,7 +24,8 @@ export class CommentFormComponent {
   captchaImage: string | null = null;
   apiUrl = (window as any).env?.addCommentRest || 'http://localhost:5000/api/comments';
   captchaUrl = (window as any).env?.getCaptchaRest || 'http://localhost:5004/api/captcha';
-  
+  charCount = 0;
+
   constructor(private fb: FormBuilder, private http: HttpClient) { 
     this.commentForm = this.fb.group({
       userName: ['', [Validators.required, Validators.pattern(/^[a-zA-Z0-9]+$/)]],
@@ -42,16 +43,29 @@ export class CommentFormComponent {
     this.isLoadingCaptcha = true;
     this.http.get(this.captchaUrl).subscribe({
       next: (response: any) => {
-        this.captchaImage = response.image;
-        this.commentForm.patchValue({ captchaKey: response.key });
+        if (response.image && response.captchaKey ) {
+          this.captchaImage = response.image;
+          this.commentForm.patchValue({ captchaKey: response.captchaKey  }); 
+        } else {
+          console.error('Captcha response missing fields:', response);
+        }
         this.isLoadingCaptcha = false;
-        
       },
-      error: () => {
+      error: (error) => {
+        console.error('Failed to load CAPTCHA:', error);
         alert('Failed to load CAPTCHA.');
         this.isLoadingCaptcha = false;
       }
     });
+  }
+
+  updateCharCount() {
+    this.charCount = this.commentForm.get('text')?.value.length || 0;
+  }
+
+  isFieldInvalid(fieldName: string): boolean {
+    const field = this.commentForm.get(fieldName);
+    return field ? field.invalid && field.touched : false;
   }
 
   toggleAttachmentsInput() {
@@ -107,39 +121,48 @@ export class CommentFormComponent {
   }
 
   submitComment() {
-    if (this.commentForm.invalid)
-    {
-      alert('Please fill in all required fields.');
+    if (this.commentForm.invalid) {
+      Object.keys(this.commentForm.controls).forEach(field => {
+        const control = this.commentForm.get(field);
+        control?.markAsTouched();
+      });
+  
+      //alert('Please fill in all required fields correctly.');
       return;
     }
-
+  
     const formData = new FormData();
     Object.keys(this.commentForm.value).forEach((key) => {
       formData.append(key, this.commentForm.value[key]);
+      console.log(key, this.commentForm.value[key]);
     });
-
+  
     if (this.parentId) {
       formData.append('parentId', this.parentId);
     }
-
+  
     this.selectedFiles.forEach((file) => {
       formData.append('fileAttachments', file);
     });
-
+  
     this.http.post(this.apiUrl, formData).subscribe({
-      next: (response) => {
-        alert('Comment added successfully!');
-        this.commentAdded.emit(response);
+      next: () => {
+        console.log("OK");
+        this.commentAdded.emit();
         this.commentForm.reset();
         this.selectedFiles = [];
         this.captchaImage = null;
         this.isFormVisible = false;
       },
       error: (error: HttpErrorResponse) => {
-        alert(`Error: ${error.error}`);
+        console.error('Failed to add comment:', error);
+        alert(`Error: ${error.message}`);
+        this.requestCaptcha();
+        this.commentForm.patchValue({ captcha: '' });
       },
     });
   }
+  
 
   cancelForm() {
     this.cancel.emit();

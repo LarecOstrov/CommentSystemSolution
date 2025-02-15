@@ -13,17 +13,18 @@
   
         <button class="sortButton" [class.active]="sortBy === 'email'" 
           (click)="sortByEmail();">{{ sortBy != 'email' ? '' : sortOrder === 'ASC' ? '⬆' : '⬇' }} Email</button>
-      </div>
+        </div>
       <div class="filters">
-        <button (click)="toggleCommentForm()"  class="say-button" [class.active]="!isCommentFormVisible">Say</button>
+        <button (click)="toggleCommentForm()" class="say-button" [class.active]="!isCommentFormVisible">
+          {{ isCommentFormVisible ? '✖' : 'Say' }}
+        </button>
       </div>
-     </div>
-    
+     </div>    
 
     <!-- Форма коментаря -->
-    <app-comment-form *ngIf="isCommentFormVisible" (closeForm)="isCommentFormVisible = false"></app-comment-form>
+    <app-comment-form *ngIf="isCommentFormVisible" (closeForm)="toggleCommentForm()"></app-comment-form>
 
     <!-- Список коментарів -->
-    <app-comment-list></app-comment-list>
+    <app-comment-list [sortBy]="sortBy" [sortOrder]="sortOrder"></app-comment-list>
   </div>
 </main>

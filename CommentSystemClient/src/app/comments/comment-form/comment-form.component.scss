@@ -1,8 +1,7 @@
 .comment-form {
     display: flex;
     flex-direction: column;
-    width: 90%;
-    margin-bottom: 10px;
+    margin-top: 10px;
     font-family: 'Arial', sans-serif;
     background: #fff;
     padding: 20px;
@@ -21,6 +20,11 @@
       border: 1px solid #ccc;
       border-radius: 5px;
     }
+
+    input.invalid, textarea.invalid {
+      border: 2px solid rgb(255, 185, 185);
+      background-color: #ffe6e6;
+    }
   }
   .sendbar {
     display: flex;
@@ -28,6 +32,17 @@
     justify-content: right;
     align-items: right;
     gap: 10px;
+
+    button {
+      background: black;
+      color: white;
+      padding: 10px;
+      min-width: 80px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
   }
 
   .toolbar {
@@ -39,8 +54,8 @@
   }
   
   textarea {
-    width: 96,5%;
-    height: 120px;
+    width: 96.5%;
+    height: 170px;
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 5px;
@@ -53,7 +68,7 @@
   
   button {
     min-width: 30px;
-    background: #a8acb1;
+    background: #7f8288;
     color: white;
     padding: 5px;
     border: none;
@@ -72,6 +87,25 @@
   button:disabled {
     background: #ccc;
   }
+
+  .loading {
+    margin-top: 15px;
+    color: #7f8288;
+  }
+
+  .text-area-container {
+    position: relative;
+  }
+  
+  .char-counter {
+    position: absolute;
+    bottom: 5px;
+    right: 10px;
+    font-size: 12px;
+    color: gray;
+  }
+  
+  
   
   .captcha-container {
     display: flex;
@@ -85,13 +119,17 @@
       margin-right: 10px;
     }
   
-    input {
-      
+    input {      
       padding: 5px;
       border: 1px solid #ccc;
       border-radius: 5px;
       width: 20%;
       margin-top: 5px;
+    }
+
+    input.invalid {
+      border: 2px solid rgb(255, 185, 185);
+      background-color: #ffe6e6;
     }
     
     button{
@@ -99,6 +137,6 @@
       padding-inline: 10px;
       margin-top: 5px;
       margin-right: 10px;
-    }
+    }    
   }
   

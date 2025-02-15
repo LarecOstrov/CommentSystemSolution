@@ -17,6 +17,7 @@ export class AppComponent {
   isCommentFormVisible = false;
 
   sortByCreatedAt() {  
+    this.closeCommentForm();
     if (this.sortBy === 'createdAt') {
       this.toggleSortOrder();
     }  
@@ -27,6 +28,7 @@ export class AppComponent {
   }
 
   sortByUserName() {
+    this.closeCommentForm();
     if (this.sortBy === 'userName') {
       this.toggleSortOrder();
     }
@@ -37,6 +39,7 @@ export class AppComponent {
   }
 
   sortByEmail() {
+    this.closeCommentForm();
     if (this.sortBy === 'email') {
       this.toggleSortOrder();
     }
@@ -52,8 +55,9 @@ export class AppComponent {
 
   toggleCommentForm() {
     this.isCommentFormVisible = !this.isCommentFormVisible;
+  }  
 
-  }
-
-  
+  closeCommentForm() {
+    this.isCommentFormVisible = false;
+  }  
 }

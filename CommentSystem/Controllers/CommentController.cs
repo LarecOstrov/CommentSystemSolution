@@ -24,7 +24,7 @@ public class CommentController : ControllerBase
         try
         {  
             await _commentService.ProcessingCommentAsync(input, fileAttachments);
-            return Ok("Comment added to processing");
+            return Ok();
         }
         catch (Exception ex)
         {

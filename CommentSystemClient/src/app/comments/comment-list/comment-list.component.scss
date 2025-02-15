@@ -2,8 +2,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 96%;
-  margin-bottom: 20px;
+  width: 100%;
+  margin: 10px 0;
 }
 
 .sorting {
@@ -17,6 +17,7 @@
 .comment-stream {
   display: flex;
   flex-direction: column;
+  width: 100%;
   gap: 10px;
   border-radius: 5px;
 }
@@ -32,6 +33,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  background-color: #ebebeb;
+  border-radius: 1px;
 }
 
 .comment-avatar {
@@ -48,8 +51,54 @@
 }
 
 button {
-  background: #007bff;
+  background: #000000;
   color: #fff;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.replies-container
+{
+  margin-top: 10px;
+}
+
+.comment-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.reply-button {
+  min-width: 65px;
+  min-height: 30px;
+  background-color: #71747a;
+  color: white;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.reply-button.active {
+  background-color: #000000;
+}
+
+.replies-buttons {  
+  display: flex;
+  gap: 10px;
+}
+
+.reply-card{
+  margin-top: 10px;
+}
+
+.replies-buttons button {
+  min-width: 65px;
+  min-height: 30px;
+  background-color: black;
+  color: white;
   padding: 5px 10px;
   border: none;
   border-radius: 5px;

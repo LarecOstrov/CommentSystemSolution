@@ -1,14 +1,17 @@
-<!-- Кнопка "Say" -->
 <form *ngIf="isFormVisible" [formGroup]="commentForm" (ngSubmit)="submitComment()" class="comment-form">  
 
   <!-- Поля вводу -->
   <div class="form-group">
-    <input id="userName" formControlName="userName" placeholder="User Name" required />
-    <input id="email" formControlName="email" type="email" placeholder="Email" required />
+    <input id="userName" formControlName="userName" placeholder="User Name" [class.invalid]="isFieldInvalid('userName')" required />
+    <input id="email" formControlName="email" type="email" placeholder="Email" [class.invalid]="isFieldInvalid('email')" required />
     <input id="homePage" formControlName="homePage" type="url" placeholder="Home Page (optional)" />
   </div>
 
-  <textarea id="text" formControlName="text" placeholder="Write your comment..." required></textarea>
+  <!-- Поле тексту з лічильником символів -->
+  <div class="text-area-container">
+    <textarea id="text" formControlName="text" placeholder="Write your comment..." [class.invalid]="isFieldInvalid('text')" (input)="updateCharCount()" required></textarea>
+    <span class="char-counter">{{ charCount }}/500</span>
+  </div>
 
   <!-- HTML панель -->
   <div class="toolbar">
@@ -20,7 +23,6 @@
   </div>
 
   <!-- Завантаження файлів -->
-  
   <div class="attachments" *ngIf="isAtachemntsInputVisible">    
     <input id="fileAttachments" type="file" (change)="onFileSelected($event)" multiple accept="image/jpeg,image/png,image/gif,text/plain" />
     <p *ngIf="selectedFiles.length >= 6" class="error">Max 6 files allowed.</p>
@@ -34,18 +36,16 @@
     </div>
   </div>
 
-  <div *ngIf="isLoadingCaptcha" class="loading">Loading CAPTCHA...</div>
+  <div *ngIf="isLoadingCaptcha" class="loading">loading captcha...</div>
 
   <!-- CAPTCHA -->
   <div *ngIf="captchaImage && !isLoadingCaptcha" class="captcha-container">
     <img [src]="captchaImage" alt="Captcha" /> <button type="button" (click)="requestCaptcha()">↻</button>
-    <input id="captcha" formControlName="captcha" placeholder="Enter CAPTCHA" required />
+    <input id="captcha" formControlName="captcha" placeholder="Enter CAPTCHA" [class.invalid]="isFieldInvalid('captcha')" required />
   </div>
 
   <!-- Кнопки -->
   <div class="sendbar">
-    <button type="submit"  (click)="submitComment()">Submit</button>
-    <button type="button" (click)="cancelForm()">Cancel</button>
+    <button type="submit">Submit</button>
   </div>
-  
 </form>

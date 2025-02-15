@@ -27,5 +27,7 @@ namespace Common.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public List<FileAttachment>? FileAttachments { get; set; } = null;
+
+        public bool HasReplies { get; set; } = false;
     }
 }

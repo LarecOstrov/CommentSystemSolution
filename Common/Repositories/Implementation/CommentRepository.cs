@@ -17,7 +17,6 @@ public class CommentRepository : ICommentRepository
     public IQueryable<Comment> GetAll()
     {
         return _context.Comments
-            .Include(c => c.Replies)
             .Include(c => c.User)
             .Include(c => c.FileAttachments)
             .AsQueryable();
@@ -26,8 +25,8 @@ public class CommentRepository : ICommentRepository
     public async Task<Comment?> GetByIdAsync(Guid id)
     {
         return await _context.Comments
-            .Include(c => c.Replies)
             .Include(c => c.User)
+            .Include(c => c.FileAttachments)
             .FirstOrDefaultAsync(c => c.Id == id);
     }
 
@@ -36,6 +35,15 @@ public class CommentRepository : ICommentRepository
         await _context.Comments.AddAsync(comment);
         if (await _context.SaveChangesAsync() > 0)
         {
+            if (comment.ParentId.HasValue)
+            {
+                var parentComment = await _context.Comments.FindAsync(comment.ParentId.Value);
+                if (parentComment is not null && !parentComment.HasReplies)
+                {
+                    parentComment.HasReplies = true;
+                    await _context.SaveChangesAsync();
+                }
+            }
             return comment;
         }
         throw new DbUpdateException("Failed to add comment");
@@ -56,8 +64,25 @@ public class CommentRepository : ICommentRepository
         var comment = await _context.Comments.FindAsync(id);
         if (comment != null)
         {
+            var parentId = comment.ParentId;
             _context.Comments.Remove(comment);
-            return await _context.SaveChangesAsync() > 0;
+            if (await _context.SaveChangesAsync() > 0)
+            {
+                if (parentId.HasValue)
+                {
+                    bool hasOtherReplies = await _context.Comments.AnyAsync(c => c.ParentId == parentId.Value);
+                    if (!hasOtherReplies)
+                    {
+                        var parentComment = await _context.Comments.FindAsync(parentId.Value);
+                        if (parentComment is not null)
+                        {
+                            parentComment.HasReplies = false;
+                            await _context.SaveChangesAsync();
+                        }
+                    }
+                }
+                return true;
+            };
         }
         return false;
     }    

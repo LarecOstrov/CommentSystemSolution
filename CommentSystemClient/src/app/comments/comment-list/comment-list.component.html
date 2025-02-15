@@ -4,11 +4,64 @@
       <div class="comment-header">
         <img src="assets/img/plugs/avatar.png" alt="Avatar" class="comment-avatar" />
         <div>
-          <strong>{{ comment.user?.userName }} </strong>
+          <strong>{{ comment.user.userName }} </strong>
           <span class="comment-date"> {{ comment.createdAt | date:'dd.MM.yy HH:mm' }}</span>
         </div>
       </div>
       <p class="comment-text">{{ comment.text }}</p>
+
+      <div class="comment-actions">
+        <!-- Кнопки "Переглянути відповіді" -->
+        <div class="replies-buttons">
+          <button *ngIf="comment.hasReplies && !isRepliesOpen(comment.id)" (click)="toggleReplies(comment.id)">Replies</button>
+          <button *ngIf="isRepliesOpen(comment.id)" (click)="toggleReplies(comment.id)">✖</button>
+        </div>
+      
+        <!-- Кнопка "Відповісти" -->
+        <button class="reply-button" (click)="toggleReplyForm(comment.id)" [class.active]="!isReplyFormOpen(comment.id)">
+          {{ isReplyFormOpen(comment.id) ? '✖' : 'Reply' }}
+        </button>
+      </div>
+      
+      <!-- Форма відповіді -->
+      <app-comment-form *ngIf="isReplyFormOpen(comment.id)"
+                        [parentId]="comment.id"
+                        (commentAdded)="onReplyAdded(comment.id)"
+                        (cancel)="toggleReplyForm(comment.id)">
+      </app-comment-form>
+      
+      <!-- Відповіді -->
+      <div *ngIf="isRepliesOpen(comment.id)" class="replies-container">
+        <div *ngFor="let reply of comment.replies" class="comment-card reply-card">
+          <div class="comment-header">
+            <img src="assets/img/plugs/avatar.png" alt="Avatar" class="comment-avatar" />
+            <div>
+              <strong>{{ reply.user.userName }}</strong>
+              <span class="comment-date"> {{ reply.createdAt | date:'dd.MM.yy HH:mm' }}</span>
+            </div>
+          </div>
+          <p class="comment-text">{{ reply.text }}</p>
+      
+          <div class="comment-actions">
+            <div class="replies-buttons">
+              <button *ngIf="reply.hasReplies && !isRepliesOpen(reply.id)" (click)="toggleReplies(reply.id)">Replies</button>
+              <button *ngIf="isRepliesOpen(reply.id)" (click)="toggleReplies(reply.id)">✖</button>
+            </div>
+      
+            <button class="reply-button" (click)="toggleReplyForm(reply.id)" [class.active]="!isReplyFormOpen(reply.id)">
+              {{ isReplyFormOpen(reply.id) ? '✖' : 'Reply' }}
+            </button>
+          </div>
+      
+          <!-- Відповіді вкладені -->
+          <div *ngIf="isRepliesOpen(reply.id)" class="nested-replies">
+            <div *ngFor="let nestedReply of reply.replies" class="comment-card nested-reply-card">
+              <p class="comment-text">{{ nestedReply.text }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
     </div>
   </div>
 
