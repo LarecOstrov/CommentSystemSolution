@@ -2,29 +2,51 @@
   <div class="content">
     <h1>Speaking Room</h1>
 
-    <!-- Фільтри та "Say" -->
-     <div class="filters-container">
+    <!-- filters and say button -->
+    <div class="filters-container">
       <div class="filters">
         <button class="sortButton" [class.active]="sortBy === 'createdAt'" 
-          (click)="sortByCreatedAt();">{{sortBy != 'createdAt' ? '' : sortOrder === 'ASC' ? '⬆' : '⬇' }} Date</button>
-  
+          (click)="setSort('createdAt')">{{sortBy !== 'createdAt' ? '' : sortOrder === 'ASC' ? '⬆' : '⬇' }} Date</button>
+
         <button class="sortButton" [class.active]="sortBy === 'userName'" 
-          (click)="sortByUserName();">{{sortBy != 'userName' ? '' : sortOrder === 'ASC' ? '⬆' : '⬇' }} User</button>
-  
+          (click)="setSort('userName')">{{sortBy !== 'userName' ? '' : sortOrder === 'ASC' ? '⬆' : '⬇' }} User</button>
+
         <button class="sortButton" [class.active]="sortBy === 'email'" 
-          (click)="sortByEmail();">{{ sortBy != 'email' ? '' : sortOrder === 'ASC' ? '⬆' : '⬇' }} Email</button>
-        </div>
+          (click)="setSort('email')">{{ sortBy !== 'email' ? '' : sortOrder === 'ASC' ? '⬆' : '⬇' }} Email</button>
+      </div>
       <div class="filters">
         <button (click)="toggleCommentForm()" class="say-button" [class.active]="!isCommentFormVisible">
           {{ isCommentFormVisible ? '✖' : 'Say' }}
         </button>
       </div>
-     </div>    
+    </div>    
+    
 
-    <!-- Форма коментаря -->
+    <!-- comment form -->
     <app-comment-form *ngIf="isCommentFormVisible" (closeForm)="toggleCommentForm()"></app-comment-form>
 
-    <!-- Список коментарів -->
-    <app-comment-list [sortBy]="sortBy" [sortOrder]="sortOrder"></app-comment-list>
+    <div class="pagination" *ngIf="!isCommentFormVisible">
+      <button (click)="goToFirstPage()" [disabled]="currentPage === 1">⏮ First</button>
+      <button (click)="previousPage()" [disabled]="currentPage === 1">◀ Prev</button>
+      <span>Page {{ currentPage }} of {{ totalPages }}</span>
+      <button (click)="nextPage()" [disabled]="!hasNextPage">Next ▶</button>
+      <button (click)="goToLastPage()" [disabled]="!hasNextPage">Last ⏭</button>
+    </div>
+
+    <!-- main comments -->
+    <app-comment-list 
+      [comments]="comments"
+      [sortBy]="sortBy" 
+      [sortOrder]="sortOrder">
+    </app-comment-list>
+
+    <!-- pagination -->
+    <div class="pagination">
+      <button (click)="goToFirstPage()" [disabled]="currentPage === 1">⏮ First</button>
+      <button (click)="previousPage()" [disabled]="currentPage === 1">◀ Prev</button>
+      <span>Page {{ currentPage }} of {{ totalPages }}</span>
+      <button (click)="nextPage()" [disabled]="!hasNextPage">Next ▶</button>
+      <button (click)="goToLastPage()" [disabled]="!hasNextPage">Last ⏭</button>
+    </div>
   </div>
 </main>

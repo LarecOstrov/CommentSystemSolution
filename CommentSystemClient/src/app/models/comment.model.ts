@@ -1,5 +1,8 @@
 export interface User {
     userName: string;
+    email: string;
+    homePage: string;
+    CreatedAt: string;
   }
   
   export interface Comment {
@@ -10,6 +13,7 @@ export interface User {
     hasReplies: boolean;
     showReplies?: boolean;
     replies: Comment[];
+    fileAttachments: { type: string, url: string }[];
     hasMoreReplies?: boolean;
   }
   

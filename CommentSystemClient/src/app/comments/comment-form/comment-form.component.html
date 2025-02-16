@@ -23,17 +23,16 @@
   </div>
 
   <!-- Завантаження файлів -->
-  <div class="attachments" *ngIf="isAtachemntsInputVisible">    
+  <div class="attachments" *ngIf="isAttachmentsInputVisible">    
     <input id="fileAttachments" type="file" (change)="onFileSelected($event)" multiple accept="image/jpeg,image/png,image/gif,text/plain" />
     <p *ngIf="selectedFiles.length >= 6" class="error">Max 6 files allowed.</p>
   </div>
 
-  <!-- Попередній перегляд -->
-  <div class="preview">
-    <div *ngFor="let file of previewFiles">
-      <img *ngIf="file.type.includes('image')" [src]="file.url" (click)="openLightbox(file.url)" />
-      <a *ngIf="file.type.includes('text')" href="{{ file.url }}" target="_blank">Preview TXT</a>
-    </div>
+  <!-- Список файлів -->
+  <div class="file-list">
+    <p *ngFor="let file of selectedFiles">
+      {{ file.name }}
+    </p>
   </div>
 
   <div *ngIf="isLoadingCaptcha" class="loading">loading captcha...</div>

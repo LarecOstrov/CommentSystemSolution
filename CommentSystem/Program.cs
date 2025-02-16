@@ -20,6 +20,7 @@ using Common.Extensions;
 using Common.Helpers;
 using Common.Repositories.Implementation;
 using Common.Models;
+using CommentSystem.GraphQL.Types;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -96,10 +97,12 @@ async Task ConfigureServicesAsync(IServiceCollection services, AppOptions option
     .AddGraphQLServer()    
     .AddQueryType<Query>()
     .AddType<Comment>()
+    .AddType<CommentSortType>()
+    .AddType<UserSortType>()
     .AddType<User>()
     .AddType<FileAttachment>()
     .AddFiltering()
-    .AddSorting()
+    .AddSorting()    
     .AddInstrumentation()
     .AddProjections()
     .ModifyRequestOptions(opt => opt.IncludeExceptionDetails = true)

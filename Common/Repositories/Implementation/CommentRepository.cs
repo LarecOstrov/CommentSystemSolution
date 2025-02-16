@@ -2,6 +2,7 @@
 using Common.Models;
 using Common.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 namespace Common.Repositories.Implementations;
 
@@ -35,13 +36,17 @@ public class CommentRepository : ICommentRepository
         await _context.Comments.AddAsync(comment);
         if (await _context.SaveChangesAsync() > 0)
         {
+            Log.Information("Comment added successfully");
             if (comment.ParentId.HasValue)
             {
+                Log.Information($"Comment has parent {comment.ParentId.HasValue}");
                 var parentComment = await _context.Comments.FindAsync(comment.ParentId.Value);
                 if (parentComment is not null && !parentComment.HasReplies)
                 {
+                    Log.Information("Parent comment exists");
                     parentComment.HasReplies = true;
                     await _context.SaveChangesAsync();
+                    Log.Information("Parent comment updated successfully");
                 }
             }
             return comment;

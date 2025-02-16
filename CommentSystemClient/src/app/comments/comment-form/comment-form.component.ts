@@ -16,11 +16,10 @@ export class CommentFormComponent {
   @Output() cancel = new EventEmitter<void>();
 
   commentForm: FormGroup;
-  selectedFiles: File[] = [];
-  previewFiles: any[] = [];
+  selectedFiles: { file: File, name: string }[] = [];
   isFormVisible = true;
   isLoadingCaptcha = false;
-  isAtachemntsInputVisible = false;
+  isAttachmentsInputVisible = false;
   captchaImage: string | null = null;
   apiUrl = (window as any).env?.addCommentRest || 'http://localhost:5000/api/comments';
   captchaUrl = (window as any).env?.getCaptchaRest || 'http://localhost:5004/api/captcha';
@@ -69,11 +68,7 @@ export class CommentFormComponent {
   }
 
   toggleAttachmentsInput() {
-    if (this.isAtachemntsInputVisible) {
-      this.isAtachemntsInputVisible = false;
-    } else {
-      this.isAtachemntsInputVisible = true;
-    }
+    this.isAttachmentsInputVisible = !this.isAttachmentsInputVisible;
   }
 
   insertTag(tag: string) {
@@ -84,40 +79,82 @@ export class CommentFormComponent {
     }
   }
 
-  onFileSelected(event: any) {
+  async onFileSelected(event: any) {
     if (event.target.files.length + this.selectedFiles.length > 6) {
       alert('Maximum 6 files allowed.');
+      event.target.value = null;
       return;
     }
 
     const files: File[] = Array.from(event.target.files);
 
-    files.forEach(file => {
-      if (file.size > 100 * 1024) {
+    for (const file of files) {
+      if (file.type.includes('text/plain') && file.size > 100 * 1024) {
         alert(`File ${file.name} is too large. Max 100KB allowed.`);
-        return;
+        continue;
       }
 
       if (!file.type.includes('image') && !file.type.includes('text/plain')) {
         alert(`File ${file.name} is not supported. Only images (JPG, PNG, GIF) and TXT files are allowed.`);
-        return;
+        continue;
       }
 
-      const reader = new FileReader();
-      reader.onload = (e: any) => {
-        this.previewFiles.push({ type: file.type, url: e.target.result });
-      };
-      reader.readAsDataURL(file);
+      let finalFile = file;
+      if (file.type.includes('image')) {
+        finalFile = await this.resizeImage(file, 320, 240);
+      }
 
-      this.selectedFiles.push(file);
-    });
+      this.selectedFiles.push({
+        file: finalFile,
+        name: this.truncateFileName(file.name, 30),
+      });
+    }
   }
 
-  openLightbox(imageUrl: string) {
-    const lightbox = window.open('', '_blank');
-    if (lightbox) {
-      lightbox.document.write(`<img src="${imageUrl}" style="width:100%; max-width:800px;" />`);
-    }
+  truncateFileName(name: string, maxLength: number): string {
+    if (name.length <= maxLength) return name;
+    const extension = name.split('.').pop();
+    return name.substring(0, maxLength) + '...' + extension;
+  }
+
+  async resizeImage(file: File, maxWidth: number, maxHeight: number): Promise<File> {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth || height > maxHeight) {
+            const aspectRatio = width / height;
+            if (width > height) {
+              width = maxWidth;
+              height = Math.round(width / aspectRatio);
+            } else {
+              height = maxHeight;
+              width = Math.round(height * aspectRatio);
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const resizedFile = new File([blob], file.name, { type: file.type });
+              resolve(resizedFile);
+            }
+          }, file.type);
+        };
+      };
+    });
   }
 
   submitComment() {
@@ -126,28 +163,24 @@ export class CommentFormComponent {
         const control = this.commentForm.get(field);
         control?.markAsTouched();
       });
-  
-      //alert('Please fill in all required fields correctly.');
       return;
     }
-  
+
     const formData = new FormData();
     Object.keys(this.commentForm.value).forEach((key) => {
       formData.append(key, this.commentForm.value[key]);
-      console.log(key, this.commentForm.value[key]);
     });
-  
+
     if (this.parentId) {
       formData.append('parentId', this.parentId);
     }
-  
-    this.selectedFiles.forEach((file) => {
+
+    this.selectedFiles.forEach(({ file }) => {
       formData.append('fileAttachments', file);
     });
-  
+
     this.http.post(this.apiUrl, formData).subscribe({
       next: () => {
-        console.log("OK");
         this.commentAdded.emit();
         this.commentForm.reset();
         this.selectedFiles = [];
@@ -162,7 +195,6 @@ export class CommentFormComponent {
       },
     });
   }
-  
 
   cancelForm() {
     this.cancel.emit();

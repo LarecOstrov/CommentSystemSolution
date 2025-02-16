@@ -1,6 +1,7 @@
 ﻿using Common.Models;
 using Common.Repositories.Interfaces;
 using Serilog;
+using HotChocolate.Data;
 
 namespace Common.GraphQL;
 

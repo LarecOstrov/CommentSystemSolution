@@ -118,7 +118,7 @@
   }
   
   .sortButton.active {
-    background: black;
+    background: #71747a;
   }
   
   .sortButton:hover,
@@ -135,6 +135,30 @@
     background-color: black;
     padding: 11px;
   }
+
+  .pagination {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+  }
+  .pagination button {
+    min-height: 30px;
+  }
+  
+  button {
+    background: #000000;
+    color: #fff;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
   
   @media (max-width: 600px) {
     .filters-container {
@@ -149,6 +173,6 @@
   
     .say-button {
       margin: 10px auto 0;
-    }
+    }   
   }
   
