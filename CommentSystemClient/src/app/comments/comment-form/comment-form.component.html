@@ -2,9 +2,12 @@
 
   <!-- Поля вводу -->
   <div class="form-group">
-    <input id="userName" formControlName="userName" placeholder="User Name" [class.invalid]="isFieldInvalid('userName')" required />
-    <input id="email" formControlName="email" type="email" placeholder="Email" [class.invalid]="isFieldInvalid('email')" required />
-    <input id="homePage" formControlName="homePage" type="url" placeholder="Home Page (optional)" />
+    <input id="userName" formControlName="userName" placeholder="User Name" 
+      [class.invalid]="isFieldInvalid('userName')" required />
+    <input id="email" formControlName="email" type="email" placeholder="Email" 
+      [class.invalid]="isFieldInvalid('email')" required />
+    <input id="homePage" formControlName="homePage" type="url" placeholder="Home Page (optional)" 
+      [class.invalid]="isFieldInvalid('homePage')"/>
   </div>
 
   <!-- Поле тексту з лічильником символів -->
@@ -30,17 +33,20 @@
 
   <!-- Список файлів -->
   <div class="file-list">
-    <p *ngFor="let file of selectedFiles">
-      {{ file.name }}
-    </p>
+    <div *ngFor="let file of selectedFiles; let i = index" class="file-item">
+      <span>{{ file.name }}</span>
+      <button type="button" class="remove-btn" (click)="removeFile(i)">×</button>
+    </div>
   </div>
 
   <div *ngIf="isLoadingCaptcha" class="loading">loading captcha...</div>
 
   <!-- CAPTCHA -->
   <div *ngIf="captchaImage && !isLoadingCaptcha" class="captcha-container">
-    <img [src]="captchaImage" alt="Captcha" /> <button type="button" (click)="requestCaptcha()">↻</button>
-    <input id="captcha" formControlName="captcha" placeholder="Enter CAPTCHA" [class.invalid]="isFieldInvalid('captcha')" required />
+    <img [src]="captchaImage" alt="Captcha" />
+    <button type="button" (click)="requestCaptcha()">↻</button>
+    <input id="captcha" formControlName="captcha" placeholder="Enter CAPTCHA" 
+           [class.invalid]="isFieldInvalid('captcha')" required (focus)="handleCaptchaFocus()" />
   </div>
 
   <!-- Кнопки -->

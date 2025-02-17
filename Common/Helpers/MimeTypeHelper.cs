@@ -11,14 +11,14 @@ namespace Common.Helpers
         {
             if (file == null || file.Length == 0)
             {
-                return false; // File is empty or null
+                throw new Exception($"File is empty: {file?.FileName}");
             }
 
             var ext = Path.GetExtension(file.FileName)?.ToLower();
 
             if (string.IsNullOrEmpty(ext) || !allowedMimeTypes.ContainsKey(ext))
             {
-                return false; // Extension is missing or not allowed
+                return false;
             }
 
             var provider = new FileExtensionContentTypeProvider();

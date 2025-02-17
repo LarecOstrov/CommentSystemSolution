@@ -103,8 +103,8 @@ public class CommentService : ICommentService
                 {
                     if (!MimeTypeHelper.IsValidMimeType(file, _allowedMimeTypes))
                     {
-                        Log.Warning($"File with unsupported extension: {file.Name}");
-                        throw new Exception($"File with unsupported extension: {file.Name}");
+                        Log.Warning($"File with unsupported extension: {file.FileName}");
+                        throw new Exception($"File with unsupported extension: {file.FileName}");
                     }
                 }
 

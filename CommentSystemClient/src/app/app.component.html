@@ -33,8 +33,17 @@
       <button (click)="goToLastPage()" [disabled]="!hasNextPage">Last ⏭</button>
     </div>
 
+    <!--  sceleton -->
+    <div *ngIf="isLoading">
+      <div class="skeleton-card" *ngFor="let _ of [1,2,3,4,5]">
+        <div class="skeleton-avatar"></div>
+        <div class="skeleton-text"></div>
+        <div class="skeleton-text small"></div>
+        <div class="skeleton-reply"></div>
+      </div>
+    </div>
     <!-- main comments -->
-    <app-comment-list 
+    <app-comment-list *ngIf="!isLoading"
       [comments]="comments"
       [sortBy]="sortBy" 
       [sortOrder]="sortOrder">

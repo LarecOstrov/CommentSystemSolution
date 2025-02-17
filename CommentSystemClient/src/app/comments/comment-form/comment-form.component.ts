@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-comment-form',
@@ -21,6 +22,8 @@ export class CommentFormComponent {
   isLoadingCaptcha = false;
   isAttachmentsInputVisible = false;
   captchaImage: string | null = null;
+  captchaRequestedAt: number | null = null; 
+  captchaTimeout = 4 * 60 * 1000 + 50 * 1000; // captcha life time
   apiUrl = (window as any).env?.addCommentRest || 'http://localhost:5000/api/comments';
   captchaUrl = (window as any).env?.getCaptchaRest || 'http://localhost:5004/api/captcha';
   charCount = 0;
@@ -44,7 +47,8 @@ export class CommentFormComponent {
       next: (response: any) => {
         if (response.image && response.captchaKey ) {
           this.captchaImage = response.image;
-          this.commentForm.patchValue({ captchaKey: response.captchaKey  }); 
+          this.commentForm.patchValue({ captchaKey: response.captchaKey  });
+          this.captchaRequestedAt = Date.now(); 
         } else {
           console.error('Captcha response missing fields:', response);
         }
@@ -58,14 +62,20 @@ export class CommentFormComponent {
     });
   }
 
+  handleCaptchaFocus() {
+    if (this.captchaRequestedAt && Date.now() - this.captchaRequestedAt >= this.captchaTimeout) {
+      this.requestCaptcha();
+    }
+  }
+
   updateCharCount() {
     this.charCount = this.commentForm.get('text')?.value.length || 0;
   }
 
   isFieldInvalid(fieldName: string): boolean {
     const field = this.commentForm.get(fieldName);
-    return field ? field.invalid && field.touched : false;
-  }
+    return field ? field.invalid && (field.dirty || field.touched) : false;
+  }  
 
   toggleAttachmentsInput() {
     this.isAttachmentsInputVisible = !this.isAttachmentsInputVisible;
@@ -106,7 +116,7 @@ export class CommentFormComponent {
 
       this.selectedFiles.push({
         file: finalFile,
-        name: this.truncateFileName(file.name, 30),
+        name: this.truncateFileName(file.name, 50),
       });
     }
   }
@@ -163,24 +173,26 @@ export class CommentFormComponent {
         const control = this.commentForm.get(field);
         control?.markAsTouched();
       });
+      this.showError('Please fill in all required fields correctly.');
       return;
     }
-
+  
     const formData = new FormData();
     Object.keys(this.commentForm.value).forEach((key) => {
       formData.append(key, this.commentForm.value[key]);
     });
-
+  
     if (this.parentId) {
       formData.append('parentId', this.parentId);
     }
-
+  
     this.selectedFiles.forEach(({ file }) => {
       formData.append('fileAttachments', file);
     });
-
+  
     this.http.post(this.apiUrl, formData).subscribe({
       next: () => {
+        this.showSuccess('Your comment has been added successfully!');
         this.commentAdded.emit();
         this.commentForm.reset();
         this.selectedFiles = [];
@@ -189,16 +201,47 @@ export class CommentFormComponent {
       },
       error: (error: HttpErrorResponse) => {
         console.error('Failed to add comment:', error);
-        alert(`Error: ${error.message}`);
+        if (error.error && error.error.message) {
+          this.showError(error.error.message);
+        } else {
+          this.showError('Failed to add comment. Please try again later.');
+        }
         this.requestCaptcha();
         this.commentForm.patchValue({ captcha: '' });
       },
     });
   }
 
+  showError(message: string) {
+    Swal.fire({
+      icon: 'error',
+      text: message,
+      confirmButtonColor: '#d33',
+      customClass: {
+        popup: 'custom-swal'
+      }
+    });
+  }
+  
+  showSuccess(message: string) {
+    Swal.fire({
+      icon: 'success',
+      text: message,
+      confirmButtonColor: '#28a745',
+      customClass: {
+        popup: 'custom-swal'
+      }
+    });
+  }
+  
+
   cancelForm() {
     this.cancel.emit();
     this.captchaImage = null;
     this.isFormVisible = false;
+  }
+
+  removeFile(index: number) {
+    this.selectedFiles.splice(index, 1);
   }
 }

@@ -1,6 +1,9 @@
 <div class="comments-container">
   <div class="comment-stream">
     <!-- main comments -->
+
+    
+
     <div *ngFor="let comment of comments" class="comment-card">
       <div class="comment-header">
         <img src="assets/img/plugs/avatar.png" alt="Avatar" class="comment-avatar" />
@@ -19,7 +22,7 @@
           <div class="slider-container" #sliderRef [attr.data-comment-id]="comment.id">
             <div class="image-wrapper" *ngFor="let image of getImageAttachments(comment.fileAttachments)">
               <img [src]="image.url" alt="Attachment Image" />
-              <a [href]="image.url" download class="download-btn" title="Download">
+              <a [href]="image.url" target="_blank" download class="download-btn" title="Download">
                 ⇩
               </a>
             </div>
@@ -30,7 +33,7 @@
         <!-- Attachments (Text Files) -->
         <div class="text-files">
           <div *ngFor="let file of getTextAttachments(comment.fileAttachments)" class="text-file">
-            <img src="assets/img/plugs/txt-icon.png" alt="Text File" class="file-icon" />
+            <span alt="Text File" class="file-icon">📄</span>
             <a [href]="file.url" target="_blank" download>{{ truncateFileName(file.url, 30) }}</a>
           </div>
         </div>

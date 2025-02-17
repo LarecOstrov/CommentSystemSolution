@@ -27,7 +27,7 @@ export class AppComponent implements OnInit {
   afterCursor: string | null = null;
   beforeCursor: string | null = null;
   comments: Comment[] = [];
-
+  isLoading = false;
   constructor(private apollo: Apollo) {}
 
   ngOnInit() {
@@ -35,8 +35,7 @@ export class AppComponent implements OnInit {
   }
 
   fetchComments() {
-    console.log(this.sortBy, this.sortOrder, this.currentPage, this.pageSize, this.afterCursor, this.beforeCursor);
-  
+    this.isLoading = true;
     const GET_COMMENTS = gql`
       query getComments($first: Int, $last: Int, $after: String, $before: String, $sort: [CommentSortInput!], $where: CommentFilterInput) {
         comments(first: $first, last: $last, after: $after, before: $before, order: $sort, where: $where) {
@@ -95,6 +94,7 @@ export class AppComponent implements OnInit {
         replies: [],
         hasMoreReplies: comment.hasReplies
       }));
+      this.isLoading = false;
   
       // Виправлений розрахунок `totalPages`
       this.totalPages = Math.ceil(data.comments.totalCount / this.pageSize);

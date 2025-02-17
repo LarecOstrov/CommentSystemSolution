@@ -21,7 +21,9 @@ export class CommentListComponent {
   @Input() currentPage!: number;
   @Input() totalPages!: number;
   @Input() hasNextPage!: boolean;
- 
+
+  isLoadingReplies = true
+
   openReplyForms: Set<string> = new Set();
   openReplies: Set<string> = new Set();
   replyPagination: Map<string, { afterCursor: string | null; hasMore: boolean }> = new Map();
@@ -29,6 +31,7 @@ export class CommentListComponent {
   constructor(private apollo: Apollo) {}
   
   fetchReplies(parentId: string, afterCursor: string | null = null) {
+    this.isLoadingReplies = true;
     const GET_REPLIES = gql`
       query getReplies($parentId: UUID!, $first: Int!, $after: String) {
         comments(where: { parentId: { eq: $parentId } }, first: $first, after: $after) {
@@ -69,6 +72,7 @@ export class CommentListComponent {
         });
 
         this.comments = [...this.comments];
+        this.isLoadingReplies = false;
       }
     });
   }
@@ -94,27 +98,20 @@ export class CommentListComponent {
 
   toggleReplies(commentId: string) {
     if (this.openReplies.has(commentId)) {
-      // Закриваємо та не видаляємо replies, щоб зберігати завантажені відповіді
       this.openReplies.delete(commentId);
     } else {
-      this.openReplies.add(commentId);
-  
-      // Шукаємо коментар у дереві
+      this.openReplies.add(commentId);  
+      
       const parentComment = this.findCommentById(commentId, this.comments);
       
-      if (parentComment) {
-        // 🔥 Створюємо новий об'єкт для уникнення помилки "Cannot add property"
+      if (parentComment) {        
         const updatedComment = { ...parentComment };
-  
-        // Якщо replies не існує, ініціалізуємо його
         if (!updatedComment.replies) {
           updatedComment.replies = [];
-        }
-  
-        // Оновлюємо дерево коментарів (іммутабельний підхід)
+        }  
+        
         this.updateCommentInTree(commentId, updatedComment, this.comments);
         
-        // Виконуємо запит
         this.fetchReplies(commentId);
       }
     }
@@ -122,8 +119,7 @@ export class CommentListComponent {
   
   updateCommentInTree(commentId: string, updatedComment: Comment, comments: Comment[]): void {
   for (let i = 0; i < comments.length; i++) {
-    if (comments[i].id === commentId) {
-      // 🔥 Іммутабельно оновлюємо коментар
+    if (comments[i].id === commentId) {     
       comments[i] = { ...updatedComment };
       return;
     }
@@ -174,16 +170,24 @@ export class CommentListComponent {
     return attachments.filter(att => att.type.toLowerCase() === 'text');
   }
 
-  truncateFileName(name: string, maxLength: number): string {
-    if (name.length <= maxLength) return name;
-    const extension = name.split('.').pop();
-    return name.substring(0, maxLength) + '...' + extension;
+  truncateFileName(url: string, maxLength: number): string {
+    const fileNameWithGuid = url.split('/').pop() || ''; 
+    const parts = fileNameWithGuid.split('_'); 
+    const fileName = parts.length > 1 ? parts.slice(1).join('_') : fileNameWithGuid; 
+  
+    if (fileName.length <= maxLength) return fileName;
+  
+    const dotIndex = fileName.lastIndexOf('.');
+    const extension = dotIndex !== -1 ? fileName.substring(dotIndex) : ''; 
+    const baseName = fileName.substring(0, dotIndex !== -1 ? dotIndex : fileName.length); 
+  
+    return baseName.substring(0, maxLength - extension.length) + '...' + extension;
   }
 
   scrollImages(commentId: string, direction: 'left' | 'right') {
     const slider = this.sliders.find(el => el.nativeElement.getAttribute('data-comment-id') === commentId);
     if (slider) {
-      const scrollAmount = 200; // Крок прокрутки
+      const scrollAmount = 200;
       slider.nativeElement.scrollBy({ 
         left: direction === 'right' ? scrollAmount : -scrollAmount, 
         behavior: 'smooth' 

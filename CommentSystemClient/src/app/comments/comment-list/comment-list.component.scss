@@ -206,6 +206,13 @@ button:disabled {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+
+  a {
+    text-decoration: none;
+    color: blue;
+    font-weight: 600;
+    font-size: 14px;
+  }
 }
 
 .text-file {
@@ -224,3 +231,5 @@ button:disabled {
   color: blue;
   font-size: 14px;
 }
+
+
