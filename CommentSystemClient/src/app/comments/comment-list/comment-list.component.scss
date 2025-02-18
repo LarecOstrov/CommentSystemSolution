@@ -88,6 +88,10 @@
   display: flex;
   justify-content: center;
   gap: 10px;
+  
+  button:hover{
+    background: rgb(57, 57, 57);
+  }
 }
 
 .replies-buttons button.active {
@@ -103,6 +107,16 @@ button {
   cursor: pointer;
 }
 
+button:hover {
+  background: rgb(57, 57, 57);
+}
+
+.reply-button.active:hover {
+  background: rgb(57, 57, 57);
+}
+.replies-buttons .active:hover {
+  background: rgb(57, 57, 57);
+}
 button:disabled {
   background: #ccc;
   cursor: not-allowed;
@@ -232,4 +246,44 @@ button:disabled {
   font-size: 14px;
 }
 
+.replies-loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 40px;
+}
+
+.replies-loader::after {
+  content: "";
+  width: 30px;
+  height: 30px;
+  border: 3px solid black; 
+  border-top-color: transparent; 
+  border-radius: 50%;
+  animation: spin 1s linear infinite; 
+}
+
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.comment-text {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.comment-text a {
+  color: #007bff;
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+
+.comment-text a:hover {
+  color: #0056b3;
+}
 

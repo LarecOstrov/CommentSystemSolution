@@ -19,9 +19,9 @@ export class AppComponent implements OnInit {
   sortOrder: 'ASC' | 'DESC' = 'DESC';
   isCommentFormVisible = false;
 
-  // Параметри пагінації
+  // pagination properties
   currentPage = 1;
-  pageSize = 5;
+  pageSize = 25;
   totalPages = 0;
   hasNextPage = true;
   afterCursor: string | null = null;

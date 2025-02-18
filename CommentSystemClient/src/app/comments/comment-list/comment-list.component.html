@@ -1,20 +1,17 @@
 <div class="comments-container">
   <div class="comment-stream">
-    <!-- main comments -->
 
-    
-
+    <!-- main comments --> 
     <div *ngFor="let comment of comments" class="comment-card">
       <div class="comment-header">
         <img src="assets/img/plugs/avatar.png" alt="Avatar" class="comment-avatar" />
         <div>
-          <strong>{{ comment.user.userName}} {{ comment.user.email}}</strong>
-          <span class="comment-date">{{ comment.createdAt | date:'dd.MM.yy HH:mm' }}</span>
+          <span><strong>{{ comment.user.userName}} </strong> {{ comment.user.email}}</span>
+          <span class="comment-date"> {{ comment.createdAt | date:'dd.MM.yy HH:mm' }}</span>
         </div>
       </div>
-      <p class="comment-text">{{ comment.text }}</p>
+      <p class="comment-text" [innerHTML]="comment.text | bbcode"></p>
 
-      <!-- Attachments (Images) -->
       <!-- Attachments (Images) -->
       <div *ngIf="comment.fileAttachments?.length && comment.fileAttachments.length > 0" class="attachments">
         <div *ngIf="getImageAttachments(comment.fileAttachments).length > 0" class="image-slider">
@@ -50,12 +47,16 @@
                   (click)="toggleReplies(comment.id)">
             ✖
           </button>
+          <button *ngIf="isRepliesOpen(comment.id)" class="sortButton" [class.active]="sortBy === 'createdAt'" 
+          (click)="changeRepliesSortOrder(comment.id)">{{sortRepliesOrder === 'ASC' ? '⬆' : '⬇' }} Date
+        </button>  
         </div>
         <button class="reply-button" 
                 (click)="toggleReplyForm(comment.id)" 
                 [class.active]="!isReplyFormOpen(comment.id)">
           {{ isReplyFormOpen(comment.id) ? '✖' : 'Reply' }}
-        </button>
+        </button>        
+              
       </div>
 
       <!-- reply form -->
@@ -67,7 +68,10 @@
 
       <!-- replies -->
       <div *ngIf="isRepliesOpen(comment.id)" class="replies-container">
-        <app-comment-list [comments]="comment.replies" [parentId]="comment.id"></app-comment-list>        
+        
+        <app-comment-list *ngIf="!isRepliesLoading(comment.id)"  [comments]="comment.replies" [parentId]="comment.id"></app-comment-list> 
+
+        <div *ngIf="isRepliesLoading(comment.id)" class="replies-loader"></div>
 
         <div class="replies-pagination">
           <!-- collapse button -->
@@ -83,6 +87,7 @@
         </div>
         
       </div>
+      
     </div>
   </div>
 </div>

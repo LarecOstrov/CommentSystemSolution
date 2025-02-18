@@ -1,4 +1,4 @@
-<form *ngIf="isFormVisible" [formGroup]="commentForm" (ngSubmit)="submitComment()" class="comment-form">  
+<form *ngIf="isFormVisible && !isPreviewVisible" [formGroup]="commentForm" (ngSubmit)="submitComment()" class="comment-form">  
 
   <!-- Поля вводу -->
   <div class="form-group">
@@ -12,7 +12,8 @@
 
   <!-- Поле тексту з лічильником символів -->
   <div class="text-area-container">
-    <textarea id="text" formControlName="text" placeholder="Write your comment..." [class.invalid]="isFieldInvalid('text')" (input)="updateCharCount()" required></textarea>
+    <textarea id="text" formControlName="text" placeholder="Write your comment..." [class.invalid]="isFieldInvalid('text')"
+     (input)="updateCharCount()" required></textarea>
     <span class="char-counter">{{ charCount }}/500</span>
   </div>
 
@@ -51,6 +52,47 @@
 
   <!-- Кнопки -->
   <div class="sendbar">
+    <button type="button" (click)="previewComment()">Preview</button>
     <button type="submit">Submit</button>
   </div>
 </form>
+
+<div *ngIf="isPreviewVisible" class="comment-preview">
+  <div class="comment-card">
+    <div class="comment-header">
+      <img src="assets/img/plugs/avatar.png" alt="Avatar" class="comment-avatar" />
+      <div>
+        <span><strong>{{ commentForm.value.userName }} </strong> {{ commentForm.value.email }} </span>
+        <span class="comment-date">{{getNow()}}</span>
+      </div>
+    </div>
+    <p class="comment-text" [innerHTML]="commentForm.value.text | bbcode"></p>
+
+    <!-- Attachments (Images) -->
+    <div *ngIf="selectedFiles.length > 0" class="attachments">
+      <div *ngIf="getImageAttachments(selectedFiles).length > 0" class="image-slider">
+        <button class="slider-btn left" (click)="scrollImages('preview', 'left')">❮</button>
+        <div class="slider-container" #sliderRef data-preview>
+          <div class="image-wrapper" *ngFor="let image of getImageAttachments(selectedFiles)">
+            <img [src]="image.previewUrl" alt="Attachment Image" />
+            
+          </div>
+        </div>
+        <button class="slider-btn right" (click)="scrollImages('preview', 'right')">❯</button>
+      </div>
+
+      <!-- Attachments (Text Files) -->
+      <div class="text-files">
+        <div *ngFor="let file of getTextAttachments(selectedFiles)" class="text-file">
+          <span alt="Text File" class="file-icon">📄</span>
+          <a [href]="" target="_blank" download>{{ truncateFileName(file.name, 30) }}</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sendbar">
+    <button type="button" (click)="editComment()">Back</button>
+  </div>
+</div>
+

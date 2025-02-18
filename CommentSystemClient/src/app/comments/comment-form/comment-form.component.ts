@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { BbcodePipe } from '../../pipes/bbcode.pipe';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -9,16 +10,18 @@ import Swal from 'sweetalert2';
   templateUrl: './comment-form.component.html',
   styleUrls: ['./comment-form.component.scss'],
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, BbcodePipe],
 })
 export class CommentFormComponent {
   @Input() parentId: string | null = null;
   @Output() commentAdded = new EventEmitter<any>();
   @Output() cancel = new EventEmitter<void>();
+  @Output() formClosed = new EventEmitter<void>();
 
   commentForm: FormGroup;
   selectedFiles: { file: File, name: string }[] = [];
   isFormVisible = true;
+  isPreviewVisible = false;
   isLoadingCaptcha = false;
   isAttachmentsInputVisible = false;
   captchaImage: string | null = null;
@@ -33,12 +36,12 @@ export class CommentFormComponent {
       userName: ['', [Validators.required, Validators.pattern(/^[a-zA-Z0-9]+$/)]],
       email: ['', [Validators.required, Validators.email]],
       homePage: ['', [Validators.minLength(10), Validators.pattern(/^(http|https):\/\/[^ "]+$/)]],
-      text: ['', [Validators.required]],
+      text: ['', [Validators.required, Validators.minLength(2)]],
       captchaKey: [null],
-      captcha: ['', [Validators.required, Validators.minLength(5)]],
+      captcha: ['', [Validators.required, Validators.minLength(6)]],
     });
-
-    this.requestCaptcha();
+    this.loadSavedFormData();
+    this.requestCaptcha();    
   }
 
   requestCaptcha() {    
@@ -53,6 +56,7 @@ export class CommentFormComponent {
           console.error('Captcha response missing fields:', response);
         }
         this.isLoadingCaptcha = false;
+        console.log(response.captchaKey);
       },
       error: (error) => {
         console.error('Failed to load CAPTCHA:', error);
@@ -83,11 +87,53 @@ export class CommentFormComponent {
 
   insertTag(tag: string) {
     const textControl = this.commentForm.get('text');
+  
     if (textControl) {
-      const selection = `[${tag}]${textControl.value}[/${tag}]`;
-      textControl.setValue(selection);
+      const textarea = document.getElementById('text') as HTMLTextAreaElement;
+      if (!textarea) return;
+  
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const value = textControl.value;
+  
+      if (tag === 'a') {
+        const url = prompt('Enter the URL:', 'https://');
+        if (!url || !/^https?:\/\/\S+/.test(url)) {
+          alert('Invalid URL');
+          return;
+        }
+  
+        let newText;
+        if (start !== end) {
+          newText = value.substring(0, start) + `[a=${url}]` + value.substring(start, end) + `[/a]` + value.substring(end);
+        } else {
+          newText = value.substring(0, start) + `[a=${url}]Link[/a]` + value.substring(end);
+        }
+  
+        textControl.setValue(newText);
+      } else {
+        let newText;
+        if (start !== end) {
+          newText = value.substring(0, start) + `[${tag}]` + value.substring(start, end) + `[/${tag}]` + value.substring(end);
+        } else {
+          newText = value.substring(0, start) + `[${tag}][/` + tag + `]` + value.substring(end);
+        }
+  
+        textControl.setValue(newText);
+      }
+  
+      textControl.markAsTouched();
+  
+      setTimeout(() => {
+        const newCursorPos = start + `[${tag}]`.length;
+        textarea.selectionStart = newCursorPos;
+        textarea.selectionEnd = newCursorPos;
+        textarea.focus();
+      }, 0);
     }
   }
+  
+  
 
   async onFileSelected(event: any) {
     if (event.target.files.length + this.selectedFiles.length > 6) {
@@ -167,7 +213,92 @@ export class CommentFormComponent {
     });
   }
 
+  saveFormData() {
+    const formData = {
+      userName: this.commentForm.value.userName,
+      email: this.commentForm.value.email,
+      homePage: this.commentForm.value.homePage
+    };
+    console.log('Saving form data:', formData);
+    localStorage.setItem('commentFormData', JSON.stringify(formData));
+  }
+
+  loadSavedFormData() {
+    const savedData = localStorage.getItem('commentFormData');
+    if (savedData) {
+      console.log('Loading saved form data:', savedData);
+      const parsedData = JSON.parse(savedData);
+      this.commentForm.patchValue({
+        userName: parsedData.userName || '',
+        email: parsedData.email || '',
+        homePage: parsedData.homePage || ''
+      });
+    }
+  }
+
+  previewComment() {
+    const formControls = this.commentForm.controls;
+    const captchaValue = formControls['captcha'].value;
+    formControls['captcha'].setValidators([]);
+    formControls['captcha'].updateValueAndValidity();
+
+    if (this.commentForm.invalid) {
+      Object.keys(this.commentForm.controls).forEach(field => {
+        const control = this.commentForm.get(field);
+        control?.markAsTouched();
+      });
+      Swal.fire({
+        icon: 'warning',
+        text: 'Please fill in all required fields before previewing.',
+        confirmButtonColor: '#f0ad4e',
+        customClass: { popup: 'custom-swal' }
+      });
+      return;
+    }
+    this.isPreviewVisible = true;
+  }
+
+  getNow(): string {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = String(now.getFullYear()).slice(-2); 
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+  
+    return `${day}.${month}.${year} ${hours}:${minutes}`;
+  }  
+
+  getImageAttachments(files: { file: File, name: string }[]) {
+    return files
+      .filter(file => file.file.type.includes('image'))
+      .map(file => ({
+        previewUrl: URL.createObjectURL(file.file),
+        name: file.name
+      }));
+  }
+  
+  getTextAttachments(files: { file: File, name: string }[]) {
+    return files.filter(file => file.file.type.includes('text/plain'));
+  }
+
+  scrollImages(commentId: string, direction: 'left' | 'right') {
+    const slider = document.querySelector(`[data-preview]`) as HTMLElement;
+    if (slider) {
+      const scrollAmount = 200;
+      slider.scrollBy({ 
+        left: direction === 'right' ? scrollAmount : -scrollAmount, 
+        behavior: 'smooth' 
+      });
+    }
+  }
+
+  editComment() {
+    this.isPreviewVisible = false;
+  }
+
   submitComment() {
+    console.log(this.commentForm.value.captchaKey);
     if (this.commentForm.invalid) {
       Object.keys(this.commentForm.controls).forEach(field => {
         const control = this.commentForm.get(field);
@@ -192,12 +323,14 @@ export class CommentFormComponent {
   
     this.http.post(this.apiUrl, formData).subscribe({
       next: () => {
+        this.saveFormData();
         this.showSuccess('Your comment has been added successfully!');
         this.commentAdded.emit();
         this.commentForm.reset();
         this.selectedFiles = [];
         this.captchaImage = null;
         this.isFormVisible = false;
+        this.formClosed.emit(); 
       },
       error: (error: HttpErrorResponse) => {
         console.error('Failed to add comment:', error);
@@ -210,7 +343,7 @@ export class CommentFormComponent {
         this.commentForm.patchValue({ captcha: '' });
       },
     });
-  }
+  }  
 
   showError(message: string) {
     Swal.fire({
@@ -223,22 +356,23 @@ export class CommentFormComponent {
     });
   }
   
-  showSuccess(message: string) {
+  showSuccess(message: string, duration: number = 2000) {
     Swal.fire({
       icon: 'success',
       text: message,
-      confirmButtonColor: '#28a745',
+      showConfirmButton: false,
+      timer: duration,
       customClass: {
         popup: 'custom-swal'
       }
     });
-  }
-  
+  } 
 
   cancelForm() {
     this.cancel.emit();
     this.captchaImage = null;
     this.isFormVisible = false;
+    this.formClosed.emit();
   }
 
   removeFile(index: number) {

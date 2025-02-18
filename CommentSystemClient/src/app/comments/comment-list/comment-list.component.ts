@@ -3,13 +3,14 @@ import { Apollo, gql } from 'apollo-angular';
 import { CommonModule } from '@angular/common';
 import { CommentFormComponent } from '../comment-form/comment-form.component'; 
 import { Comment } from '../../models/comment.model'; 
+import { BbcodePipe } from '../../pipes/bbcode.pipe';
 
 @Component({
   selector: 'app-comment-list',
   templateUrl: './comment-list.component.html',
   styleUrls: ['./comment-list.component.scss'],
   standalone: true,
-  imports: [CommonModule, CommentFormComponent], 
+  imports: [CommonModule, CommentFormComponent, BbcodePipe], 
 })
 export class CommentListComponent {
   @Input() comments: Comment[] = [];
@@ -17,30 +18,32 @@ export class CommentListComponent {
   @Input() parentId: string | null = null;
   @Input() sortBy: string = 'createdAt';
   @Input() sortOrder: 'ASC' | 'DESC' = 'DESC';
-  
+  sortRepliesOrder: 'ASC' | 'DESC' = 'ASC';
+
   @Input() currentPage!: number;
   @Input() totalPages!: number;
   @Input() hasNextPage!: boolean;
 
-  isLoadingReplies = true
-
+  isLoadingRepliesMap: Map<string, boolean> = new Map();
+  
   openReplyForms: Set<string> = new Set();
   openReplies: Set<string> = new Set();
   replyPagination: Map<string, { afterCursor: string | null; hasMore: boolean }> = new Map();
 
   constructor(private apollo: Apollo) {}
   
-  fetchReplies(parentId: string, afterCursor: string | null = null) {
-    this.isLoadingReplies = true;
+  fetchReplies(parentId: string, afterCursor: string | null = null, sortOrder: 'ASC' | 'DESC' = 'ASC') {
+    this.isLoadingRepliesMap.set(parentId, true);
+  
     const GET_REPLIES = gql`
-      query getReplies($parentId: UUID!, $first: Int!, $after: String) {
-        comments(where: { parentId: { eq: $parentId } }, first: $first, after: $after) {
+      query getReplies($parentId: UUID!, $first: Int!, $after: String, $order: [CommentSortInput!]) {
+        comments(where: { parentId: { eq: $parentId } }, first: $first, after: $after, order: $order) {
           nodes {
             id
             text
             parentId
             createdAt
-            user { userName email}
+            user { userName email }
             fileAttachments { type url }
             hasReplies
           }
@@ -48,33 +51,63 @@ export class CommentListComponent {
         }
       }
     `;
-
+  
     this.apollo.watchQuery<{ comments: { nodes: Comment[], pageInfo: { hasNextPage: boolean, endCursor: string | null } } }>(
       {
         query: GET_REPLIES,
-        variables: { parentId, first: 25, after: afterCursor },
+        variables: { 
+          parentId, 
+          first: 25, 
+          after: afterCursor, 
+          order: [{ createdAt: sortOrder }]
+        },
       }
     ).valueChanges.subscribe(({ data }) => {
       if (!data || !data.comments) return;
-
+  
       const parentComment = this.findCommentById(parentId, this.comments);
       if (parentComment) {
         const newReplies = data.comments.nodes.filter(reply =>
           !(parentComment.replies.some(existingReply => existingReply.id === reply.id))
         );
-
-        parentComment.replies = [...parentComment.replies, ...newReplies];
+  
+        parentComment.replies = newReplies;
         parentComment.hasMoreReplies = data.comments.pageInfo.hasNextPage;
-
+  
         this.replyPagination.set(parentId, {
           afterCursor: data.comments.pageInfo.endCursor || null,
           hasMore: data.comments.pageInfo.hasNextPage,
         });
-
+  
         this.comments = [...this.comments];
-        this.isLoadingReplies = false;
+        this.isLoadingRepliesMap.set(parentId, false);
       }
     });
+  }
+  
+  loadMoreReplies(parentId: string) {
+    const pagination = this.replyPagination.get(parentId);
+    if (pagination && pagination.hasMore) {
+      this.fetchReplies(parentId, pagination.afterCursor, this.sortRepliesOrder);
+    }
+  }
+
+
+  changeRepliesSortOrder(parentId: string) {    
+    const parentComment = this.findCommentById(parentId, this.comments);
+    if (parentComment) {
+      parentComment.replies = [];
+    }
+  
+    this.sortRepliesOrder = this.sortRepliesOrder === 'ASC' ? 'DESC' : 'ASC';
+  
+    this.replyPagination.set(parentId, { afterCursor: null, hasMore: true });
+  
+    this.fetchReplies(parentId, null, this.sortRepliesOrder);
+  }
+
+  isRepliesLoading(commentId: string): boolean {
+    return this.isLoadingRepliesMap.get(commentId) || false;
   }
 
   findCommentById(commentId: string, comments: Comment[]): Comment | null {
@@ -118,23 +151,16 @@ export class CommentListComponent {
   }
   
   updateCommentInTree(commentId: string, updatedComment: Comment, comments: Comment[]): void {
-  for (let i = 0; i < comments.length; i++) {
-    if (comments[i].id === commentId) {     
-      comments[i] = { ...updatedComment };
-      return;
+    for (let i = 0; i < comments.length; i++) {
+      if (comments[i].id === commentId) {     
+        comments[i] = { ...updatedComment };
+        return;
+      }
+      if (comments[i].replies && comments[i].replies.length > 0) {
+        this.updateCommentInTree(commentId, updatedComment, comments[i].replies);
+      }
     }
-    if (comments[i].replies && comments[i].replies.length > 0) {
-      this.updateCommentInTree(commentId, updatedComment, comments[i].replies);
-    }
-  }
-}
-
-  loadMoreReplies(parentId: string) {
-    const pagination = this.replyPagination.get(parentId);
-    if (pagination && pagination.hasMore) {
-      this.fetchReplies(parentId, pagination.afterCursor);
-    }
-  }
+  }  
 
   collapseReplies(commentId: string) {
     this.openReplies.delete(commentId);

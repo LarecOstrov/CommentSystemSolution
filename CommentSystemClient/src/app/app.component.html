@@ -15,7 +15,7 @@
           (click)="setSort('email')">{{ sortBy !== 'email' ? '' : sortOrder === 'ASC' ? '⬆' : '⬇' }} Email</button>
       </div>
       <div class="filters">
-        <button (click)="toggleCommentForm()" class="say-button" [class.active]="!isCommentFormVisible">
+        <button (click)="toggleCommentForm()" (formClosed)="toggleCommentForm()" class="say-button" [class.active]="!isCommentFormVisible">
           {{ isCommentFormVisible ? '✖' : 'Say' }}
         </button>
       </div>
