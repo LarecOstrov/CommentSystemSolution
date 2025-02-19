@@ -57,7 +57,7 @@ export class CommentListComponent {
         query: GET_REPLIES,
         variables: { 
           parentId, 
-          first: 25, 
+          first: 3, 
           after: afterCursor, 
           order: [{ createdAt: sortOrder }]
         },
@@ -71,7 +71,8 @@ export class CommentListComponent {
           !(parentComment.replies.some(existingReply => existingReply.id === reply.id))
         );
   
-        parentComment.replies = newReplies;
+        parentComment.replies = [...parentComment.replies, ...newReplies];
+        //this.comments = [...this.comments];
         parentComment.hasMoreReplies = data.comments.pageInfo.hasNextPage;
   
         this.replyPagination.set(parentId, {
@@ -133,18 +134,14 @@ export class CommentListComponent {
     if (this.openReplies.has(commentId)) {
       this.openReplies.delete(commentId);
     } else {
-      this.openReplies.add(commentId);  
+      this.openReplies.add(commentId);
       
       const parentComment = this.findCommentById(commentId, this.comments);
-      
-      if (parentComment) {        
-        const updatedComment = { ...parentComment };
-        if (!updatedComment.replies) {
-          updatedComment.replies = [];
-        }  
+      if (parentComment) {
         
-        this.updateCommentInTree(commentId, updatedComment, this.comments);
-        
+        parentComment.replies = [];
+        this.comments = [...this.comments];
+
         this.fetchReplies(commentId);
       }
     }

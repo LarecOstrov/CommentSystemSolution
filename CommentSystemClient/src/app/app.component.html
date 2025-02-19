@@ -23,7 +23,11 @@
     
 
     <!-- comment form -->
-    <app-comment-form *ngIf="isCommentFormVisible" (closeForm)="toggleCommentForm()"></app-comment-form>
+    <app-comment-form 
+      *ngIf="isCommentFormVisible" 
+      (closeForm)="toggleCommentForm()" 
+      (formClosed)="toggleCommentForm()"> 
+    </app-comment-form>
 
     <div class="pagination" *ngIf="!isCommentFormVisible">
       <button (click)="goToFirstPage()" [disabled]="currentPage === 1">⏮ First</button>

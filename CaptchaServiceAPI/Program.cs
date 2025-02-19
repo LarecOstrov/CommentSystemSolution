@@ -1,31 +1,40 @@
-﻿using Common.Config;
-using CaptchaServiceAPI.Services.Implementations;
+﻿using CaptchaServiceAPI.Services.Implementations;
 using CaptchaServiceAPI.Services.Interfaces;
+using Common.Config;
 using Common.Extensions;
+using Common.Helpers;
 using Common.Middlewares;
 using Common.Services.Implementations;
 using Common.Services.Interfaces;
 using DNTCaptcha.Core;
 using Microsoft.AspNetCore.HttpOverrides;
 using Serilog;
-using Common.Helpers;
-using Microsoft.Extensions.Options;
 
-var builder = WebApplication.CreateBuilder(args);
+try
+{
+    var builder = WebApplication.CreateBuilder(args);
 
-// Завантаження загальної конфігурації AppOptions
+    // Load common AppOptions
+    var appOptions = LoadAppOptionsHelper.LoadAppOptions(builder);
 
-var appOptions = LoadAppOptionsHelper.LoadAppOptions(builder);
+    ConfigureLogging(builder);
+    ConfigureServices(builder, appOptions);
 
-ConfigureLogging(builder);
-ConfigureServices(builder, appOptions);
+    builder.Services.ConfigureRateLimiting(appOptions, opts => opts.IpRateLimit.CaptchaService);
 
-builder.Services.ConfigureRateLimiting(appOptions, opts => opts.IpRateLimit.CaptchaService);
+    var app = builder.Build();
+    ConfigureMiddleware(app, appOptions);
 
-var app = builder.Build();
-ConfigureMiddleware(app, appOptions);
-
-app.Run();
+    await app.RunAsync();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application failed to start");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
 
 /// <summary>
 /// Configure logger

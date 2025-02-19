@@ -14,6 +14,7 @@ internal class RabbitMqConsumer : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IConnectionFactory _connectionFactory;
+    private readonly IHubContext<WebSocketHub> _hubContext;
     private IConnection? _connection;
     private IChannel? _channel;
     private readonly string _queueName;
@@ -21,7 +22,8 @@ internal class RabbitMqConsumer : BackgroundService
     private readonly string _deadExchangeName;
     private readonly AppOptions _options;
 
-    public RabbitMqConsumer(IServiceProvider serviceProvider, IOptions<AppOptions> options, IConnectionFactory connectionFactory)
+    public RabbitMqConsumer(IServiceProvider serviceProvider, IOptions<AppOptions> options,
+        IConnectionFactory connectionFactory, IHubContext<WebSocketHub> hubContext)
     {
         _serviceProvider = serviceProvider;
         _options = options.Value;
@@ -29,6 +31,7 @@ internal class RabbitMqConsumer : BackgroundService
         _queueName = _options.RabbitMq.QueueName;
         _deadQueueName = _options.RabbitMq.DeadQueueName;
         _deadExchangeName = _options.RabbitMq.DeadExchangeName;
+        _hubContext = hubContext;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -75,12 +78,11 @@ internal class RabbitMqConsumer : BackgroundService
 
                     using var scope = _serviceProvider.CreateScope();
                     var commentService = scope.ServiceProvider.GetRequiredService<ISaveCommentService>();
-                    var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<WebSocketHub>>();
 
                     try
                     {
                         await commentService.AddCommentAsync(commentData);
-                        await hubContext.Clients.All.SendAsync("ReceiveComment", commentData.UserName, commentData.Text);
+                        await _hubContext.Clients.All.SendAsync("ReceiveComment", commentData);
                         //TODO: reset cache
                         await _channel.BasicAckAsync(ea.DeliveryTag, false);
                     }

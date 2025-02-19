@@ -5,6 +5,7 @@ import { CommentFormComponent } from './comments/comment-form/comment-form.compo
 import { CommentListComponent } from './comments/comment-list/comment-list.component';
 import { Comment } from './models/comment.model';
 import { SortingField } from './models/sorting-field.type';
+import { WebSocketService } from './services/websocket.service';
 
 @Component({
   selector: 'app-root',
@@ -28,9 +29,16 @@ export class AppComponent implements OnInit {
   beforeCursor: string | null = null;
   comments: Comment[] = [];
   isLoading = false;
-  constructor(private apollo: Apollo) {}
+  constructor(private apollo: Apollo, private wsService: WebSocketService) {}
 
   ngOnInit() {
+    this.wsService.newComment$.subscribe((comment) => {
+      if (comment) {
+        if (this.sortBy === 'createdAt' && this.sortOrder === 'DESC') {
+          this.comments.unshift(comment);          
+        }        
+      }
+    });
     this.fetchComments();
   }
 
@@ -94,9 +102,8 @@ export class AppComponent implements OnInit {
         replies: [],
         hasMoreReplies: comment.hasReplies
       }));
-      this.isLoading = false;
-  
-      // Виправлений розрахунок `totalPages`
+      this.isLoading = false;  
+     
       this.totalPages = Math.ceil(data.comments.totalCount / this.pageSize);
       this.hasNextPage = data.comments.pageInfo.hasNextPage;
       this.afterCursor = data.comments.pageInfo.endCursor || null;
