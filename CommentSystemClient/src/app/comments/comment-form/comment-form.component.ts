@@ -53,13 +53,11 @@ export class CommentFormComponent {
           this.commentForm.patchValue({ captchaKey: response.captchaKey  });
           this.captchaRequestedAt = Date.now(); 
         } else {
-          console.error('Captcha response missing fields:', response);
+          this.showError('Failed to load CAPTCHA. Try again.');
         }
         this.isLoadingCaptcha = false;
-        //console.log(response.captchaKey);
       },
       error: (error) => {
-        //console.error('Failed to load CAPTCHA:', error);
         this.showError('Failed to load CAPTCHA. Try again later.');
         this.isLoadingCaptcha = false;
       }
@@ -99,7 +97,7 @@ export class CommentFormComponent {
       if (tag === 'a') {
         const url = prompt('Enter the URL:', 'https://');
         if (!url || !/^https?:\/\/\S+/.test(url)) {
-          alert('Invalid URL');
+          this.showInfo('Invalid URL');
           return;
         }
   
@@ -146,12 +144,12 @@ export class CommentFormComponent {
 
     for (const file of files) {
       if (file.type.includes('text/plain') && file.size > 100 * 1024) {
-        alert(`File ${file.name} is too large. Max 100KB allowed.`);
+        this.showInfo(`File ${file.name} is too large. Max 100KB allowed.`);
         continue;
       }
 
       if (!file.type.includes('image') && !file.type.includes('text/plain')) {
-        alert(`File ${file.name} is not supported. Only images (JPG, PNG, GIF) and TXT files are allowed.`);
+        this.showInfo(`File ${file.name} is not supported. Only images (JPG, PNG, GIF) and TXT files are allowed.`);
         continue;
       }
 
@@ -219,14 +217,12 @@ export class CommentFormComponent {
       email: this.commentForm.value.email,
       homePage: this.commentForm.value.homePage
     };
-    console.log('Saving form data:', formData);
     localStorage.setItem('commentFormData', JSON.stringify(formData));
   }
 
   loadSavedFormData() {
     const savedData = localStorage.getItem('commentFormData');
     if (savedData) {
-      console.log('Loading saved form data:', savedData);
       const parsedData = JSON.parse(savedData);
       this.commentForm.patchValue({
         userName: parsedData.userName || '',
@@ -298,13 +294,12 @@ export class CommentFormComponent {
   }
 
   submitComment() {
-    console.log(this.commentForm.value.captchaKey);
     if (this.commentForm.invalid) {
       Object.keys(this.commentForm.controls).forEach(field => {
         const control = this.commentForm.get(field);
         control?.markAsTouched();
       });
-      this.showError('Please fill in all required fields correctly.');
+      this.showInfo('Please fill in all required fields correctly.');
       return;
     }
   
