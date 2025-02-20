@@ -29,7 +29,7 @@ try
     app.UseRouting();
 
     // Allow CORS for WebSockets
-    app.UseCors("AllowSpecificOrigins");
+    app.UseCors(appOptions.Cors.CommentService.AllowedOrigins.Any() ? "AllowSpecificOrigins" : "AllowAll");
 
     // WebSockets
     app.MapHub<WebSocketHub>("/ws");
@@ -88,7 +88,15 @@ void ConfigureServicesAsync(IServiceCollection services, AppOptions appOptions)
     // Services
     services.AddScoped<IFileAttachmentService, FileAttachmentService>();
     services.AddScoped<ISaveCommentService, SaveCommentService>();
-    services.AddSignalR();
+    services.AddSignalR(options =>
+    {
+        options.KeepAliveInterval = TimeSpan.FromSeconds(30);
+        options.ClientTimeoutInterval = TimeSpan.FromMinutes(2); 
+    })
+    .AddJsonProtocol(options =>
+    {
+        options.PayloadSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+    });
     services.AddSingleton<WebSocketHub>();
 
     // Register repositories
@@ -105,13 +113,18 @@ void ConfigureServicesAsync(IServiceCollection services, AppOptions appOptions)
                 builder.WithOrigins(corsOptions.CommentService.AllowedOrigins)
                     .AllowAnyMethod()
                     .AllowAnyHeader()
-                    .AllowCredentials());
+                    .AllowCredentials()
+                    .WithExposedHeaders("Sec-WebSocket-Accept"));
         }
         else
         {
             Log.Warning("CORS is misconfigured: No allowed origins specified.");
             options.AddPolicy("AllowAll",
-                builder => builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+                builder => 
+                builder.AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .WithExposedHeaders("Sec-WebSocket-Accept"));
         }
     });
 }

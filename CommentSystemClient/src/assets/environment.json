@@ -1,5 +1,7 @@
 {
-  "addCommentRest": "http://localhost:5001/api/comments/",
-  "getCommentsGraphQL": "http://localhost:5001/graphql",
-  "getCaptchaRest": "http://localhost:5004/api/captcha/generate"
+  "production": true,
+  "addCommentRest": "http://localhost:5000/api/comments/",
+  "getCommentsGraphQL": "http://localhost:5000/graphql",
+  "getCaptchaRest": "http://localhost:5004/api/captcha/generate",
+  "getWebSocket": "http://localhost:5002/ws"
 }

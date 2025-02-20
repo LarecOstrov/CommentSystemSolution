@@ -56,11 +56,11 @@ export class CommentFormComponent {
           console.error('Captcha response missing fields:', response);
         }
         this.isLoadingCaptcha = false;
-        console.log(response.captchaKey);
+        //console.log(response.captchaKey);
       },
       error: (error) => {
-        console.error('Failed to load CAPTCHA:', error);
-        alert('Failed to load CAPTCHA.');
+        //console.error('Failed to load CAPTCHA:', error);
+        this.showError('Failed to load CAPTCHA. Try again later.');
         this.isLoadingCaptcha = false;
       }
     });
@@ -137,7 +137,7 @@ export class CommentFormComponent {
 
   async onFileSelected(event: any) {
     if (event.target.files.length + this.selectedFiles.length > 6) {
-      alert('Maximum 6 files allowed.');
+      this.showError('Maximum 6 files allowed.');
       event.target.value = null;
       return;
     }
@@ -367,6 +367,17 @@ export class CommentFormComponent {
       }
     });
   } 
+
+  showInfo(message: string) {
+    Swal.fire({
+      icon: 'info',
+      text: message,
+      confirmButtonColor: '#d33',
+      customClass: {
+        popup: 'custom-swal'
+      }
+    });
+  }
 
   cancelForm() {
     this.cancel.emit();

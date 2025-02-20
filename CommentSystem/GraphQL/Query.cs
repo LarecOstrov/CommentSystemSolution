@@ -21,8 +21,7 @@ public class Query
     public IQueryable<Comment> GetComments()
     {
         try
-        {
-            //TODO: add cache
+        {           
             return _commentRepository.GetAll();
         }
         catch (Exception ex)
