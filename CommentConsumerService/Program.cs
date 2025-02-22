@@ -95,7 +95,7 @@ void ConfigureServicesAsync(IServiceCollection services, AppOptions appOptions)
     })
     .AddJsonProtocol(options =>
     {
-        options.PayloadSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+        options.PayloadSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
     services.AddSingleton<WebSocketHub>();
 

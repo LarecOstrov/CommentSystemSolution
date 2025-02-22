@@ -17,7 +17,6 @@ namespace Common.Models
 
         [ForeignKey("ParentId")]
         public Comment? Parent { get; set; }
-        [JsonIgnore]
         public List<Comment> Replies { get; set; } = new();
 
         public Guid UserId { get; set; }

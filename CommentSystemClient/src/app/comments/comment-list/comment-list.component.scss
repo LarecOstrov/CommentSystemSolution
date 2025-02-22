@@ -2,8 +2,27 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 100%;  
-  min-width: 700px;
+  width: 100%;
+  min-width: 300px;
+  max-width: 900px;
+  //padding: 0 1rem;
+}
+
+@media (max-width: 768px) {
+ 
+  .comments-container {
+    max-width: 600px;
+    min-width: 280px;
+  }
+}
+
+/* Адаптація для мобільних пристроїв (екрани до 480px) */
+@media (max-width: 480px) {
+  
+  .comments-container {
+    max-width: 350px;
+    min-width: 250px;
+  }
 }
 
 .sorting {
@@ -148,10 +167,9 @@ button:disabled {
   &::-webkit-scrollbar {
     display: none;
   }
-
-  /* Hide scrollbar for IE, Edge, and Firefox */
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+    
+  -ms-overflow-style: none;  
+  scrollbar-width: none;
 }
 
 .image-wrapper {
@@ -287,3 +305,16 @@ button:disabled {
   color: #0056b3;
 }
 
+@keyframes fadeBorder {
+  0% {
+    border-color: rgb(0, 0, 0);
+  }
+  100% {
+    border-color: transparent; 
+  }
+}
+
+.new-comment {
+  border: 1px solid rgb(0, 0, 0);
+  animation: fadeBorder 2s ease-in-out forwards; 
+}

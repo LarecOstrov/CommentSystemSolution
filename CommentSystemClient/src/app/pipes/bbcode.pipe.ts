@@ -4,6 +4,7 @@ import { Pipe, PipeTransform } from '@angular/core';
   name: 'bbcode'
 })
 export class BbcodePipe implements PipeTransform {
+
   transform(value: string): string {
     if (!value) return '';
 

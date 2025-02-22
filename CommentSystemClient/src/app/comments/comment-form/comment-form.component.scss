@@ -214,12 +214,14 @@ button:disabled {
 }
 
 .comment-preview .image-slider {
+  position: relative;
   display: flex;
   overflow-x: auto;
   white-space: nowrap;
   gap: 10px;
   padding-bottom: 5px;
   padding-inline: 10px;
+  align-items: center;
 }
 
 .comment-preview .slider-container {
@@ -280,16 +282,7 @@ button:disabled {
   background: rgba(128, 128, 128, 1);
 }
 
-.comment-preview .image-slider {
-  position: relative;
-  display: flex;
-  overflow-x: auto;
-  white-space: nowrap;
-  gap: 10px;
-  padding-bottom: 5px;
-  padding-inline: 10px;
-  align-items: center;
-}
+
 
 .comment-preview .slider-btn {
   position: absolute;

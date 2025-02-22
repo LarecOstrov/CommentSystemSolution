@@ -82,10 +82,8 @@ internal class RabbitMqConsumer : BackgroundService
                     try
                     {
                         var comment  = await commentService.AddCommentAsync(commentData);
-                        if (commentData.ParentId is null)
-                        {
-                            await _hubContext.Clients.All.SendAsync("ReceiveComment", comment);
-                        }
+                        
+                        await _hubContext.Clients.All.SendAsync("ReceiveComment", comment);                        
                         
                         await _channel.BasicAckAsync(ea.DeliveryTag, false);
                     }

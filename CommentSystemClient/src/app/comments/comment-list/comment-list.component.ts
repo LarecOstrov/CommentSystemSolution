@@ -2,8 +2,11 @@ import { Component, Input, ViewChildren, ElementRef, QueryList } from '@angular/
 import { Apollo, gql } from 'apollo-angular';
 import { CommonModule } from '@angular/common';
 import { CommentFormComponent } from '../comment-form/comment-form.component'; 
-import { Comment } from '../../models/comment.model'; 
+import { Comment, FileAttachment, FileType, User } from '../../models/comment.model'; 
 import { BbcodePipe } from '../../pipes/bbcode.pipe';
+import { mapFileType } from '../../utils/filetype-utils';
+import { WebSocketService } from '../../services/websocket.service';
+
 
 @Component({
   selector: 'app-comment-list',
@@ -18,21 +21,93 @@ export class CommentListComponent {
   @Input() parentId: string | null = null;
   @Input() sortBy: string = 'createdAt';
   @Input() sortOrder: 'ASC' | 'DESC' = 'DESC';
-  sortRepliesOrder: 'ASC' | 'DESC' = 'ASC';
-
+  @Input() highlightedComments: Set<string> = new Set();
   @Input() currentPage!: number;
   @Input() totalPages!: number;
   @Input() hasNextPage!: boolean;
-
+  repliesPageSize = 10;
+  sortRepliesOrder: 'DESC' | 'ASC' = 'DESC';
   isLoadingRepliesMap: Map<string, boolean> = new Map();
-  
   openReplyForms: Set<string> = new Set();
   openReplies: Set<string> = new Set();
   replyPagination: Map<string, { afterCursor: string | null; hasMore: boolean }> = new Map();
 
-  constructor(private apollo: Apollo) {}
+  constructor(private apollo: Apollo, private wsService: WebSocketService) {}
+
+  ngOnInit() {
+    this.wsService.newComment$.subscribe((comment) => {
+      if (comment && comment.parentId) {                  
+        this.addReplyToCommentTree(comment);        
+      }
+    });  
+  }
+
+  private addReplyToCommentTree(comment: Comment) {   
+    const parentComment = this.findCommentById(comment.parentId, this.comments);
+    
+    if (!parentComment) return;
   
-  fetchReplies(parentId: string, afterCursor: string | null = null, sortOrder: 'ASC' | 'DESC' = 'ASC') {
+    let attachments: FileAttachment[] = [];  
+    if (comment.fileAttachments) {
+      if (Array.isArray(comment.fileAttachments)) {
+        attachments = comment.fileAttachments as FileAttachment[];
+      } else if (typeof comment.fileAttachments === 'object' && '$values' in comment.fileAttachments) {
+        attachments = (comment.fileAttachments as any).$values as FileAttachment[];
+      }
+    }  
+
+    const newComment: Comment = { 
+      ...comment, 
+      user: comment.user as User,
+      fileAttachments: attachments.map((att: FileAttachment) => ({
+        id: att.id,
+        commentId: att.commentId,
+        url: att.url,
+        type: typeof att.type === 'string' 
+          ? att.type as FileType 
+          : mapFileType(att.type),
+        createdAt: att.createdAt
+      })),
+      replies: [],
+      hasMoreReplies: false,
+    };
+    
+    if (!this.isRepliesOpen(comment.parentId)) {
+      return;      
+    }  
+    
+    parentComment.replies = [newComment, ...parentComment.replies];
+    parentComment.hasReplies = true;
+    this.comments = [...this.comments];
+
+    this.highlightedComments = new Set([...this.highlightedComments, comment.id]);      
+
+    setTimeout(() => {
+        this.highlightedComments.delete(comment.id);
+    }, 3000);
+  
+    this.comments = [...this.comments];
+  }
+
+  toggleReplies(commentId: string) {
+  
+    const parentComment = this.findCommentById(commentId, this.comments);
+    if (!parentComment) {
+      return;
+    }
+  
+    if (this.openReplies.has(commentId)) {
+      this.openReplies.delete(commentId);
+    } else {
+      this.openReplies.add(commentId);
+  
+      if (!parentComment.replies || parentComment.replies.length === 0) {
+        this.fetchReplies(commentId, null, 'DESC');
+      }
+    }
+  }
+  
+  fetchReplies(parentId: string, afterCursor: string | null = null, sortOrder: 'DESC' | 'ASC' = 'DESC') {
     this.isLoadingRepliesMap.set(parentId, true);
   
     const GET_REPLIES = gql`
@@ -57,7 +132,7 @@ export class CommentListComponent {
         query: GET_REPLIES,
         variables: { 
           parentId, 
-          first: 3, 
+          first: this.repliesPageSize, 
           after: afterCursor, 
           order: [{ createdAt: sortOrder }]
         },
@@ -65,34 +140,59 @@ export class CommentListComponent {
     ).valueChanges.subscribe(({ data }) => {
       if (!data || !data.comments) return;
   
-      const parentComment = this.findCommentById(parentId, this.comments);
-      if (parentComment) {
-        const newReplies = data.comments.nodes.filter(reply =>
-          !(parentComment.replies.some(existingReply => existingReply.id === reply.id))
-        );
-  
-        parentComment.replies = [...parentComment.replies, ...newReplies];
-        //this.comments = [...this.comments];
-        parentComment.hasMoreReplies = data.comments.pageInfo.hasNextPage;
-  
-        this.replyPagination.set(parentId, {
-          afterCursor: data.comments.pageInfo.endCursor || null,
-          hasMore: data.comments.pageInfo.hasNextPage,
-        });
-  
-        this.comments = [...this.comments];
-        this.isLoadingRepliesMap.set(parentId, false);
+      let parentComment = this.findCommentById(parentId, this.comments);
+      if (!parentComment) {
+        return;
       }
+  
+      const updatedParentComment = { ...parentComment };
+  
+      if (!updatedParentComment.replies) {
+        updatedParentComment.replies = [];
+      }
+  
+      const newReplies = data.comments.nodes.filter(reply =>
+        !updatedParentComment.replies?.some(existingReply => existingReply.id === reply.id)
+      );
+  
+      updatedParentComment.replies = [...updatedParentComment.replies, ...newReplies];
+      updatedParentComment.hasMoreReplies = data.comments.pageInfo.hasNextPage;
+  
+      this.comments = this.comments.map(comment =>
+        comment.id === updatedParentComment.id ? updatedParentComment : comment
+      );
+  
+      this.replyPagination.set(parentId, {
+        afterCursor: data.comments.pageInfo.endCursor || null,
+        hasMore: data.comments.pageInfo.hasNextPage,
+      });
+  
+      this.isLoadingRepliesMap.set(parentId, false);
     });
-  }
+  }  
   
   loadMoreReplies(parentId: string) {
     const pagination = this.replyPagination.get(parentId);
-    if (pagination && pagination.hasMore) {
-      this.fetchReplies(parentId, pagination.afterCursor, this.sortRepliesOrder);
-    }
-  }
-
+    if (!pagination || !pagination.hasMore) return;
+  
+    const parentCommentElement = document.getElementById(`comment-${parentId}`);
+    const repliesContainer = parentCommentElement?.querySelector('.replies-container');
+  
+    if (!repliesContainer) return;
+  
+    const comments = Array.from(repliesContainer.querySelectorAll('.comment-card'));
+    const lastVisibleComment = comments[comments.length - 1];
+    if (!lastVisibleComment) return;
+  
+    const lastCommentRect = lastVisibleComment.getBoundingClientRect();
+    const lastCommentTop = lastCommentRect.top + window.scrollY;
+  
+    this.fetchReplies(parentId, pagination.afterCursor, this.sortRepliesOrder);
+  
+    setTimeout(() => {
+      window.scrollTo({ top: lastCommentTop, behavior: 'auto' });
+    }, 100);
+  }   
 
   changeRepliesSortOrder(parentId: string) {    
     const parentComment = this.findCommentById(parentId, this.comments);
@@ -129,23 +229,7 @@ export class CommentListComponent {
   toggleReplyForm(commentId: string) {
     this.openReplyForms.has(commentId) ? this.openReplyForms.delete(commentId) : this.openReplyForms.add(commentId);
   }
-
-  toggleReplies(commentId: string) {
-    if (this.openReplies.has(commentId)) {
-      this.openReplies.delete(commentId);
-    } else {
-      this.openReplies.add(commentId);
-      
-      const parentComment = this.findCommentById(commentId, this.comments);
-      if (parentComment) {
-        
-        parentComment.replies = [];
-        this.comments = [...this.comments];
-
-        this.fetchReplies(commentId);
-      }
-    }
-  }
+  
   
   updateCommentInTree(commentId: string, updatedComment: Comment, comments: Comment[]): void {
     for (let i = 0; i < comments.length; i++) {
@@ -160,6 +244,11 @@ export class CommentListComponent {
   }  
 
   collapseReplies(commentId: string) {
+    const commentElement = document.getElementById(`comment-${commentId}`);
+    if (commentElement) {
+      commentElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  
     this.openReplies.delete(commentId);
   }
  
@@ -172,7 +261,9 @@ export class CommentListComponent {
   }  
 
   onReplyAdded(parentId: string) {
-    this.fetchReplies(parentId);
+    if (!this.isRepliesOpen(parentId)) {
+      this.toggleReplies(parentId);
+    }
     this.openReplyForms.delete(parentId);
   } 
 
@@ -185,12 +276,12 @@ export class CommentListComponent {
 
   currentImageIndex: { [commentId: string]: number } = {};
 
-  getImageAttachments(attachments: { url: string, type: string }[]) {
-    return attachments.filter(att => att.type.toLowerCase() ==='image');
+  getImageAttachments(attachments: FileAttachment[]) {    
+    return attachments.filter(att => att.type === FileType.IMAGE);
   }
 
-  getTextAttachments(attachments: { url: string, type: string }[]) {
-    return attachments.filter(att => att.type.toLowerCase() === 'text');
+  getTextAttachments(attachments: FileAttachment[]) {
+    return attachments.filter(att => att.type === FileType.TEXT);
   }
 
   truncateFileName(url: string, maxLength: number): string {

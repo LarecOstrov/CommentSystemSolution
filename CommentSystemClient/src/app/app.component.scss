@@ -69,12 +69,26 @@
     display: flex;
     flex-direction: column;
     max-width: 700px;
+    min-width: 300px;
+    width: 100%;
     margin-bottom: 3rem;
+    padding: 0 1rem;
   }
 
-  .content h1 {
-    margin-top: 1.75rem;
+  @media (max-width: 768px) {
+    .content {
+      max-width: 500px;      
+    }   
   }
+  
+  /* Адаптація для мобільних пристроїв (екрани до 480px) */
+  @media (max-width: 480px) {
+    .content {
+      max-width: 300px;      
+    }      
+  }
+
+  
 
   .content p {
     margin-top: 1.5rem;
@@ -93,10 +107,7 @@
     justify-content: space-between;
     align-items: center;
     margin-top: 10px;
-    padding: 20px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    
   }
   
   .filters {
@@ -195,6 +206,20 @@
     padding: 15px;
     margin-bottom: 10px;
     animation: pulse 1.5s infinite;
+  }
+
+  @media (max-width: 768px) {    
+    .skeleton-card {
+      max-width: 475px;
+      min-width: 475px;
+    }   
+  }
+  
+  @media (max-width: 480px) {    
+    .skeleton-card {
+      min-width: 270px;
+      max-width: 270px;
+    }    
   }
   
   .skeleton-avatar {

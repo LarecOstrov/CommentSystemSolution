@@ -50,7 +50,8 @@
     <app-comment-list *ngIf="!isLoading"
       [comments]="comments"
       [sortBy]="sortBy" 
-      [sortOrder]="sortOrder">
+      [sortOrder]="sortOrder"
+      [highlightedComments]="highlightedComments">
     </app-comment-list>
 
     <!-- pagination -->

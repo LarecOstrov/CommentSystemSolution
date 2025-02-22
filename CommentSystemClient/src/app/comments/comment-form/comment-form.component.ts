@@ -1,9 +1,11 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ViewChild, ElementRef} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { BbcodePipe } from '../../pipes/bbcode.pipe';
 import Swal from 'sweetalert2';
+import { areFilesValid } from '../../utils/filetype-utils';
+import { validateBBCode, validateHtml } from '../../utils/tag-utils';
 
 @Component({
   selector: 'app-comment-form',
@@ -13,6 +15,7 @@ import Swal from 'sweetalert2';
   imports: [CommonModule, ReactiveFormsModule, BbcodePipe],
 })
 export class CommentFormComponent {
+  @ViewChild('sliderRef', { static: false }) sliderRef!: ElementRef;
   @Input() parentId: string | null = null;
   @Output() commentAdded = new EventEmitter<any>();
   @Output() cancel = new EventEmitter<void>();
@@ -129,9 +132,7 @@ export class CommentFormComponent {
         textarea.focus();
       }, 0);
     }
-  }
-  
-  
+  } 
 
   async onFileSelected(event: any) {
     if (event.target.files.length + this.selectedFiles.length > 6) {
@@ -265,7 +266,7 @@ export class CommentFormComponent {
     return `${day}.${month}.${year} ${hours}:${minutes}`;
   }  
 
-  getImageAttachments(files: { file: File, name: string }[]) {
+  getPreviewImageAttachments(files: { file: File, name: string }[]) {
     return files
       .filter(file => file.file.type.includes('image'))
       .map(file => ({
@@ -274,13 +275,13 @@ export class CommentFormComponent {
       }));
   }
   
-  getTextAttachments(files: { file: File, name: string }[]) {
+  getPreviewTextAttachments(files: { file: File, name: string }[]) {
     return files.filter(file => file.file.type.includes('text/plain'));
   }
 
-  scrollImages(commentId: string, direction: 'left' | 'right') {
-    const slider = document.querySelector(`[data-preview]`) as HTMLElement;
-    if (slider) {
+  scrollImages(direction: 'left' | 'right') {
+    if (this.sliderRef && this.sliderRef.nativeElement) {
+      const slider = this.sliderRef.nativeElement as HTMLElement;
       const scrollAmount = 200;
       slider.scrollBy({ 
         left: direction === 'right' ? scrollAmount : -scrollAmount, 
@@ -302,6 +303,22 @@ export class CommentFormComponent {
       this.showInfo('Please fill in all required fields correctly.');
       return;
     }
+
+    const textValue: string = this.commentForm.value.text;
+
+    const htmlValidation = validateHtml(textValue);
+    const bbcodeValidation = validateBBCode(textValue);
+
+    if (!htmlValidation.isValid || !bbcodeValidation.isValid) {
+      const errors = [...htmlValidation.errors, ...bbcodeValidation.errors];
+      this.showError(`Invalid input: ${errors.join('; ')}`);
+      return;
+    }
+
+    if (!areFilesValid(this.selectedFiles)) {
+      this.showError('Invalid file type. Only images and text files are allowed.');
+      return;
+    }
   
     const formData = new FormData();
     Object.keys(this.commentForm.value).forEach((key) => {
@@ -315,6 +332,8 @@ export class CommentFormComponent {
     this.selectedFiles.forEach(({ file }) => {
       formData.append('fileAttachments', file);
     });
+
+    this.showSubmitting('Submitting...');
   
     this.http.post(this.apiUrl, formData).subscribe({
       next: () => {
@@ -328,9 +347,8 @@ export class CommentFormComponent {
         this.formClosed.emit(); 
       },
       error: (error: HttpErrorResponse) => {
-        console.error('Failed to add comment:', error);
-        if (error.error && error.error.message) {
-          this.showError(error.error.message);
+        if (error.error) {
+          this.showError(error.error);
         } else {
           this.showError('Failed to add comment. Please try again later.');
         }
@@ -339,6 +357,16 @@ export class CommentFormComponent {
       },
     });
   }  
+
+  showSubmitting(message: string) {
+    Swal.fire({      
+      text: message,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+  }
 
   showError(message: string) {
     Swal.fire({
@@ -351,10 +379,9 @@ export class CommentFormComponent {
     });
   }
   
-  showSuccess(message: string, duration: number = 2000) {
+  showSuccess(message: string, duration: number = 1000) {
     Swal.fire({
-      icon: 'success',
-      text: message,
+      icon: 'success',      
       showConfirmButton: false,
       timer: duration,
       customClass: {

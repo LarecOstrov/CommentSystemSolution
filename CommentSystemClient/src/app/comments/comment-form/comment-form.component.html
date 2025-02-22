@@ -1,6 +1,6 @@
 <form *ngIf="isFormVisible && !isPreviewVisible" [formGroup]="commentForm" (ngSubmit)="submitComment()" class="comment-form">  
 
-  <!-- Поля вводу -->
+  <!-- Text field -->
   <div class="form-group">
     <input id="userName" formControlName="userName" placeholder="User Name" 
       [class.invalid]="isFieldInvalid('userName')" required />
@@ -10,7 +10,7 @@
       [class.invalid]="isFieldInvalid('homePage')"/>
   </div>
 
-  <!-- Поле тексту з лічильником символів -->
+  <!-- Text counter -->
   <div class="text-area-container">
     <textarea id="text" formControlName="text" placeholder="Write your comment..." [class.invalid]="isFieldInvalid('text')"
      (input)="updateCharCount()" required></textarea>
@@ -26,13 +26,13 @@
     <button type="button" (click)="toggleAttachmentsInput()">+ Add files</button>
   </div>
 
-  <!-- Завантаження файлів -->
+  <!-- File loading -->
   <div class="attachments" *ngIf="isAttachmentsInputVisible">    
     <input id="fileAttachments" type="file" (change)="onFileSelected($event)" multiple accept="image/jpeg,image/png,image/gif,text/plain" />
     <p *ngIf="selectedFiles.length >= 6" class="error">Max 6 files allowed.</p>
   </div>
 
-  <!-- Список файлів -->
+  <!-- File list -->
   <div class="file-list">
     <div *ngFor="let file of selectedFiles; let i = index" class="file-item">
       <span>{{ file.name }}</span>
@@ -50,7 +50,7 @@
            [class.invalid]="isFieldInvalid('captcha')" required (focus)="handleCaptchaFocus()" />
   </div>
 
-  <!-- Кнопки -->
+  <!-- Buttons -->
   <div class="sendbar">
     <button type="button" (click)="previewComment()">Preview</button>
     <button type="submit">Submit</button>
@@ -70,20 +70,20 @@
 
     <!-- Attachments (Images) -->
     <div *ngIf="selectedFiles.length > 0" class="attachments">
-      <div *ngIf="getImageAttachments(selectedFiles).length > 0" class="image-slider">
-        <button class="slider-btn left" (click)="scrollImages('preview', 'left')">❮</button>
+      <div *ngIf="getPreviewImageAttachments(selectedFiles).length > 0" class="image-slider">
+        <button class="slider-btn left" (click)="scrollImages('left')">❮</button>
         <div class="slider-container" #sliderRef data-preview>
-          <div class="image-wrapper" *ngFor="let image of getImageAttachments(selectedFiles)">
+          <div class="image-wrapper" *ngFor="let image of getPreviewImageAttachments(selectedFiles)">
             <img [src]="image.previewUrl" alt="Attachment Image" />
             
           </div>
         </div>
-        <button class="slider-btn right" (click)="scrollImages('preview', 'right')">❯</button>
+        <button class="slider-btn right" (click)="scrollImages('right')">❯</button>
       </div>
 
       <!-- Attachments (Text Files) -->
       <div class="text-files">
-        <div *ngFor="let file of getTextAttachments(selectedFiles)" class="text-file">
+        <div *ngFor="let file of getPreviewTextAttachments(selectedFiles)" class="text-file">
           <span alt="Text File" class="file-icon">📄</span>
           <a [href]="" target="_blank" download>{{ truncateFileName(file.name, 30) }}</a>
         </div>
