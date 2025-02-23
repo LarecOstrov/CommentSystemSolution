@@ -1,0 +1,7 @@
+<div class="pagination">
+  <button (click)="goToFirstPage()" [disabled]="currentPage === 1">⏮ First</button>
+  <button (click)="previousPage()" [disabled]="!hasPreviousPage">◀ Prev</button>
+  <span>Page {{ currentPage }} of {{ totalPages }}</span>
+  <button (click)="nextPage()" [disabled]="!hasNextPage">Next ▶</button>
+  <button (click)="goToLastPage()" [disabled]="currentPage === totalPages">Last ⏭</button>
+</div>

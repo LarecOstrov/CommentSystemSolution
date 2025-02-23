@@ -1,0 +1,36 @@
+<div class="comment-preview">
+    <div class="comment-card">
+      <div class="comment-header">
+        <img src="assets/img/plugs/avatar.png" alt="Avatar" class="comment-avatar" />
+        <div>
+          <span><strong>{{ username }} </strong> {{ email }} </span>
+          <span class="comment-date">{{ getNow() }}</span>
+        </div>
+      </div>
+      <p class="comment-text" [innerHTML]="commentText | bbcode"></p>
+  
+      <div *ngIf="attachments.length > 0" class="attachments">
+        <div *ngIf="getPreviewImageAttachments(attachments).length > 0" class="image-slider">
+          <button class="slider-btn left" (click)="scrollImages('left')">❮</button>
+          <div class="slider-container" #sliderRef data-preview>
+            <div class="image-wrapper" *ngFor="let image of getPreviewImageAttachments(attachments)">
+              <img [src]="image.previewUrl" alt="Attachment Image" />
+            </div>
+          </div>
+          <button class="slider-btn right" (click)="scrollImages('right')">❯</button>
+        </div>
+  
+        <div class="text-files">
+          <div *ngFor="let file of getPreviewTextAttachments(attachments)" class="text-file">
+            <span class="file-icon">📄</span>
+            <a [href]="" target="_blank" download>{{ truncateFileName(file.name, 30) }}</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+    <div class="sendbar">
+      <button type="button" (click)="editComment()">Back</button>
+    </div>
+  </div>
+  

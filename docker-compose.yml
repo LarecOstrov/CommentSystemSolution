@@ -6,8 +6,19 @@ x-environment: &common-environment
   AppOptions__RabbitMq__Port: 5672
   AppOptions__RabbitMq__UserName: CommentSystemAdmin
   AppOptions__RabbitMq__Password: CommentSystem!2025  
+  AppOptions__ConnectionStrings__DefaultConnection: "Server=db;Database=CommentSystemDB;User Id=SA;Password=CommentSystem!2025;TrustServerCertificate=True"
+
 
 services:
+  client:
+    build:
+      context: ./CommentSystemClient
+      dockerfile: Dockerfile
+    ports:
+      - "4200:80"
+    depends_on:
+      app:
+        condition: service_healthy
   app:
     build:
       context: .
@@ -19,7 +30,6 @@ services:
       <<: *common-environment
       AppOptions__AzureBlobStorage__ConnectionString: "DefaultEndpointsProtocol=https;AccountName=commentsystemstorage;AccountKey=3VXV9erOiP7q57DuRFXvE8jOtuX9TPVm2HK/fVCbfcNGcw8p5mI79DYPyQouRKRf/GIKzKYVw5qT+AStHUlQjQ==;EndpointSuffix=core.windows.net"
       AppOptions__AzureBlobStorage__ContainerName: "comment-files"
-      AppOptions__ConnectionStrings__DefaultConnection: "Server=db;Database=CommentSystemDB;User Id=SA;Password=CommentSystem!2025;TrustServerCertificate=True"
       ASPNETCORE_URLS: http://+:5000;http://+:5001
     depends_on:
       db:
@@ -28,9 +38,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      comment_consumer:
+      saver:
         condition: service_healthy
-      captcha_service:
+      captcha:
         condition: service_healthy
     restart: always
     healthcheck:
@@ -93,15 +103,19 @@ services:
       start_period: 20s
       timeout: 5s
 
-  comment_consumer:
+  saver:
     build:
       context: .
       dockerfile: CommentConsumerService/Dockerfile
+    ports:
+      - "5002:5002"
+      - "5003:5003"
     depends_on:
       rabbitmq:
         condition: service_healthy
     environment:
       <<: *common-environment
+      ASPNETCORE_URLS: http://+:5002;http://+:5003
     restart: always
     healthcheck:
       test: ["CMD", "sh", "-c", "pgrep -f 'dotnet CommentConsumerService.dll' || exit 1"]
@@ -112,7 +126,7 @@ services:
     deploy:
       replicas: 1
 
-  captcha_service:
+  captcha:
     build:
       context: .
       dockerfile: CaptchaServiceAPI/Dockerfile

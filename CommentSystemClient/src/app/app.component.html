@@ -1,0 +1,60 @@
+<main class="main">
+  <div class="content">
+    <h1>Speaking Room</h1>
+
+    <!-- Sorting Component -->
+    <app-sorting 
+      [sortBy]="sortBy" 
+      [sortOrder]="sortOrder"
+      [isCommentFormVisible]="isCommentFormVisible"
+      (sortChange)="onSortChange($event)"
+      (toggleCommentForm)="toggleCommentForm()">
+    </app-sorting>
+
+
+    <!-- Comment Form -->
+    <app-comment-form 
+      *ngIf="isCommentFormVisible" 
+      (commentAdded)="onCommentAdded()"  
+      (closeForm)="isCommentFormVisible = false"> 
+    </app-comment-form>
+
+    <!-- Pagination (Top) -->
+    <app-pagination 
+      [currentPage]="currentPage" 
+      [totalPages]="totalPages" 
+      [hasNextPage]="hasNextPage"
+      [hasPreviousPage]="hasPreviousPage"
+      [afterCursor]="afterCursor"
+      [beforeCursor]="beforeCursor"
+      (pageChange)="onPageChange($event)">
+    </app-pagination>
+
+
+    <!-- Skeleton Loader -->
+    <app-skeleton-loader 
+      *ngIf="isLoading" 
+      [count]="5">
+    </app-skeleton-loader>
+
+    <!-- Comment List -->
+    <app-comment-list *ngIf="!isLoading"
+      [comments]="comments"
+      [sortBy]="sortBy" 
+      [sortOrder]="sortOrder"
+      [highlightedComments]="highlightedComments">
+    </app-comment-list>
+
+    <!-- Pagination (Bottom) -->
+    <app-pagination 
+      [currentPage]="currentPage" 
+      [totalPages]="totalPages" 
+      [hasNextPage]="hasNextPage"
+      [hasPreviousPage]="hasPreviousPage"
+      [afterCursor]="afterCursor"
+      [beforeCursor]="beforeCursor"
+      (pageChange)="onPageChange($event)">
+    </app-pagination>
+
+  </div>
+</main>

@@ -1,0 +1,26 @@
+<div class="text-editor">
+  <textarea 
+    #textareaRef 
+    (input)="onTextChange($event)" 
+    [value]="text"
+    [class.invalid]="isTextInvalid"
+    [placeholder]="placeholder">    
+  </textarea>
+
+  <div class="toolbar">
+    <button type="button" (click)="insertTag('i')">[i]</button>
+    <button type="button" (click)="insertTag('strong')">[strong]</button>
+    <button type="button" (click)="insertTag('code')">[code]</button>
+    <button type="button" (click)="insertTag('a')">[a]</button>
+    <button type="button" (click)="triggerFileInput()">+ Add files</button>
+  </div>
+  
+  <span class="char-counter">{{ text.length }}/500</span>
+
+  <!-- Вибір файлів -->
+  <app-file-uploader 
+    #fileUploader 
+    [selectedFiles]="selectedFiles" 
+    (filesChange)="handleFilesChange($event)">
+  </app-file-uploader>
+</div>

@@ -1,38 +1,49 @@
-﻿using Common.Data;
+﻿using CommentSystem.GraphQL.Types;
+using Common.Config;
+using Common.Data;
 using Common.GraphQL;
+using Common.Helpers;
 using Common.Messaging.Interfaces;
+using Common.Messaging.Producers;
+using Common.Middlewares;
+using Common.Models;
+using Common.Models.Inputs;
+using Common.Repositories.Implementation;
 using Common.Repositories.Implementations;
 using Common.Repositories.Interfaces;
 using Common.Services.Implementations;
 using Common.Services.Interfaces;
 using Common.WebSockets;
-using Common.Messaging.Producers;
 using FluentValidation;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Prometheus;
 using RabbitMQ.Client;
 using Serilog;
-using Common.Models.Inputs;
-using Common.Config;
-using Common.Middlewares;
-using Common.Extensions;
-using Common.Helpers;
-using Common.Repositories.Implementation;
-using Common.Models;
 
-var builder = WebApplication.CreateBuilder(args);
+try
+{
+    var builder = WebApplication.CreateBuilder(args);
 
-// Load AppOptions from Common
-var appOptions = LoadAppOptionsHelper.LoadAppOptions(builder);
+    // Load AppOptions from Common
+    var appOptions = LoadAppOptionsHelper.LoadAppOptions(builder);
 
-ConfigureLogging(builder);
+    ConfigureLogging(builder);
 
-await ConfigureServicesAsync(builder.Services, appOptions);
+    await ConfigureServicesAsync(builder.Services, appOptions);
 
-var app = builder.Build();
-await ConfigureMiddleware(app, appOptions);
-app.Run();
+    var app = builder.Build();
+    await ConfigureMiddleware(app, appOptions);
+    await app.RunAsync();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application failed to start");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
 
 /// <summary>
 /// Configure logger
@@ -52,20 +63,20 @@ void ConfigureLogging(WebApplicationBuilder builder)
 /// <summary>
 /// Register services in DI container
 /// </summary>
-async Task ConfigureServicesAsync(IServiceCollection services, AppOptions options)
+async Task ConfigureServicesAsync(IServiceCollection services, AppOptions appOptions)
 {
     // MSSQL
-    Log.Information($"Connection MSSQL: {options.ConnectionStrings.DefaultConnection}");
+    Log.Information($"Connection MSSQL: {appOptions.ConnectionStrings.DefaultConnection}");
     services.AddDbContext<ApplicationDbContext>(dbOptions =>
-        dbOptions.UseSqlServer(options.ConnectionStrings.DefaultConnection));
+        dbOptions.UseSqlServer(appOptions.ConnectionStrings.DefaultConnection));
 
     // RabbitMQ
     var factory = new ConnectionFactory
     {
-        HostName = options.RabbitMq.HostName,
-        UserName = options.RabbitMq.UserName,
-        Password = options.RabbitMq.Password,
-        Port = options.RabbitMq.Port
+        HostName = appOptions.RabbitMq.HostName,
+        UserName = appOptions.RabbitMq.UserName,
+        Password = appOptions.RabbitMq.Password,
+        Port = appOptions.RabbitMq.Port
     };
 
     Log.Information($"Connecting to RabbitMQ at {factory.HostName}:{factory.Port}, {factory.UserName} {factory.Password}");
@@ -96,13 +107,16 @@ async Task ConfigureServicesAsync(IServiceCollection services, AppOptions option
     .AddGraphQLServer()
     .AddQueryType<Query>()
     .AddType<Comment>()
+    .AddType<CommentSortType>()
+    .AddType<UserSortType>()
     .AddType<User>()
     .AddType<FileAttachment>()
     .AddFiltering()
     .AddSorting()
     .AddInstrumentation()
     .AddProjections()
-    .ModifyRequestOptions(opt => opt.IncludeExceptionDetails = true);
+    .ModifyRequestOptions(opt => opt.IncludeExceptionDetails = true)
+    .ModifyCostOptions(opt => opt.EnforceCostLimits = false);
 
     services.AddScoped<Query>();
 
@@ -112,14 +126,14 @@ async Task ConfigureServicesAsync(IServiceCollection services, AppOptions option
     // Redis
     services.AddStackExchangeRedisCache(redisOptions =>
     {
-        redisOptions.Configuration = options.Redis.Connection;
-        redisOptions.InstanceName = options.Redis.InstanceName;
+        redisOptions.Configuration = appOptions.Redis.Connection;
+        redisOptions.InstanceName = appOptions.Redis.InstanceName;
     });
 
     services.AddSignalR();
 
     // CORS Configuration
-    var corsOptions = options.Cors;
+    var corsOptions = appOptions.Cors;
     services.AddCors(options =>
     {
         if (corsOptions?.CommentService.AllowedOrigins?.Any() == true)

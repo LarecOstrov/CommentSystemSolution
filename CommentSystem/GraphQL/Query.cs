@@ -1,5 +1,6 @@
 ﻿using Common.Models;
 using Common.Repositories.Interfaces;
+using HotChocolate.Data;
 using Serilog;
 
 namespace Common.GraphQL;
@@ -13,15 +14,14 @@ public class Query
         _commentRepository = commentRepository;
     }
 
-    [UsePaging]
+    [UsePaging (IncludeTotalCount = true, MaxPageSize = 25)]
     [UseProjection]
     [UseFiltering]
     [UseSorting]
     public IQueryable<Comment> GetComments()
     {
         try
-        {
-            //TODO: add cache
+        {           
             return _commentRepository.GetAll();
         }
         catch (Exception ex)

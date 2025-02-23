@@ -1,6 +1,5 @@
 ﻿using Ganss.Xss;
-
-namespace Common.Helpers;
+using System.Text.RegularExpressions;
 
 internal static class SanitizeInputHelper
 {
@@ -8,14 +7,39 @@ internal static class SanitizeInputHelper
 
     static SanitizeInputHelper()
     {
+        _sanitizer.AllowedTags.Clear();
         _sanitizer.AllowedTags.Add("a");
         _sanitizer.AllowedTags.Add("code");
         _sanitizer.AllowedTags.Add("i");
         _sanitizer.AllowedTags.Add("strong");
+
+        _sanitizer.AllowedAttributes.Clear();
+        _sanitizer.AllowedAttributes.Add("href");
+        _sanitizer.AllowedAttributes.Add("title");
+        _sanitizer.AllowedAttributes.Add("rel");
     }
 
     public static string ClearText(string text)
     {
-        return _sanitizer.Sanitize(text);
+        if (string.IsNullOrWhiteSpace(text))
+            return string.Empty;
+
+        text = RemoveBbCode(text);
+
+        text = _sanitizer.Sanitize(text);
+
+        return text;
+    }
+
+    /// <summary>
+    /// Removes all BBCode tags except the allowed ones.
+    /// </summary>
+    private static string RemoveBbCode(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return input;
+
+        string pattern = @"\[(?!/?(a|code|i|strong))[^]]*]";
+        return Regex.Replace(input, pattern, string.Empty, RegexOptions.IgnoreCase);
     }
 }
