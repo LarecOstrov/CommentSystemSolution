@@ -17,7 +17,7 @@ public class IpRateLimit
     public required int FileService { get; init; }
     public required int CommentService { get; init; }
 }
-    public class CaptchaSettings
+public class CaptchaSettings
 {
     public required int Length { get; init; }
     public required string Font { get; init; }

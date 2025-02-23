@@ -57,7 +57,7 @@ public class CommentRepository : ICommentRepository
     public async Task<Comment> UpdateAsync(Comment comment)
     {
         _context.Comments.Update(comment);
-        if(await _context.SaveChangesAsync() > 0)
+        if (await _context.SaveChangesAsync() > 0)
         {
             return comment;
         }
@@ -90,5 +90,5 @@ public class CommentRepository : ICommentRepository
             };
         }
         return false;
-    }    
+    }
 }

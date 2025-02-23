@@ -22,7 +22,7 @@ namespace Common.Helpers
                 basePath = AppContext.BaseDirectory;
                 configPath = Path.Combine(basePath, "appsettings.json");
             }
-            
+
 
             if (!File.Exists(configPath))
             {

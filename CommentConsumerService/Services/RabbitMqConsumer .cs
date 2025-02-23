@@ -81,10 +81,10 @@ internal class RabbitMqConsumer : BackgroundService
 
                     try
                     {
-                        var comment  = await commentService.AddCommentAsync(commentData);
-                        
-                        await _hubContext.Clients.All.SendAsync("ReceiveComment", comment);                        
-                        
+                        var comment = await commentService.AddCommentAsync(commentData);
+
+                        await _hubContext.Clients.All.SendAsync("ReceiveComment", comment);
+
                         await _channel.BasicAckAsync(ea.DeliveryTag, false);
                     }
                     catch (Exception ex)

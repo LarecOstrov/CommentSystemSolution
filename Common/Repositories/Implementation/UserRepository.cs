@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Common.Repositories.Implementation
 {
-    public class UserRepository: IUserRepository
+    public class UserRepository : IUserRepository
     {
         private readonly ApplicationDbContext _context;
         public UserRepository(ApplicationDbContext context)
@@ -16,7 +16,7 @@ namespace Common.Repositories.Implementation
         {
             return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
         }
-        
+
         public IQueryable<User> GetAll()
         {
             return _context.Users;

@@ -7,7 +7,6 @@ using Common.Repositories.Interfaces;
 using Common.Services.Implementations;
 using Common.Services.Interfaces;
 using Common.WebSockets;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
 using Serilog;
@@ -20,7 +19,7 @@ try
     var appOptions = LoadAppOptionsHelper.LoadAppOptions(builder);
 
     ConfigureLogging(builder);
-    
+
     ConfigureServicesAsync(builder.Services, appOptions);
 
     var app = builder.Build();
@@ -91,7 +90,7 @@ void ConfigureServicesAsync(IServiceCollection services, AppOptions appOptions)
     services.AddSignalR(options =>
     {
         options.KeepAliveInterval = TimeSpan.FromSeconds(30);
-        options.ClientTimeoutInterval = TimeSpan.FromMinutes(2); 
+        options.ClientTimeoutInterval = TimeSpan.FromMinutes(2);
     })
     .AddJsonProtocol(options =>
     {
@@ -120,7 +119,7 @@ void ConfigureServicesAsync(IServiceCollection services, AppOptions appOptions)
         {
             Log.Warning("CORS is misconfigured: No allowed origins specified.");
             options.AddPolicy("AllowAll",
-                builder => 
+                builder =>
                 builder.AllowAnyOrigin()
                 .AllowAnyMethod()
                 .AllowAnyHeader()

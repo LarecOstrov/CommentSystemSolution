@@ -22,7 +22,7 @@ public class CommentController : ControllerBase
         [FromForm] List<IFormFile>? fileAttachments)
     {
         try
-        {  
+        {
             await _commentService.ProcessingCommentAsync(input, fileAttachments);
             return Ok();
         }

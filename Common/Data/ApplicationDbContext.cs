@@ -30,17 +30,17 @@ public class ApplicationDbContext : DbContext
             .WithMany(u => u.FileAttachments)
             .HasForeignKey(c => c.CommentId)
             .OnDelete(DeleteBehavior.Cascade);
-        
+
         modelBuilder.Entity<Comment>()
-            .HasIndex(c => c.CreatedAt); 
+            .HasIndex(c => c.CreatedAt);
 
         modelBuilder.Entity<Comment>()
             .HasIndex(c => c.ParentId);
 
         modelBuilder.Entity<Comment>()
-            .HasIndex(c => c.UserId); 
-           
+            .HasIndex(c => c.UserId);
+
         modelBuilder.Entity<FileAttachment>()
-            .HasIndex(f => f.CommentId); 
+            .HasIndex(f => f.CommentId);
     }
 }

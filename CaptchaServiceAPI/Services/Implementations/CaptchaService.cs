@@ -1,10 +1,10 @@
-﻿using Microsoft.Extensions.Caching.Distributed;
-using DNTCaptcha.Core;
-using CaptchaServiceAPI.Services.Interfaces;
+﻿using CaptchaServiceAPI.Services.Interfaces;
 using Common.Config;
+using Common.Services.Interfaces;
+using DNTCaptcha.Core;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using Serilog;
-using Common.Services.Interfaces;
 
 namespace CaptchaServiceAPI.Services.Implementations;
 

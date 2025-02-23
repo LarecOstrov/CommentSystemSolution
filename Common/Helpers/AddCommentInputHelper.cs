@@ -48,7 +48,7 @@ public class AddCommentInputHelper : AbstractValidator<CommentInput>
             {
                 HasValidBBCodeStructure(x.Text, out var errorMessage);
                 return $"Invalid BBCode structure: {errorMessage}";
-            }); 
+            });
 
         RuleFor(x => x.Captcha)
             .NotEmpty().WithMessage("Captcha is required.");

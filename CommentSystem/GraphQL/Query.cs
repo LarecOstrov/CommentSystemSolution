@@ -14,14 +14,14 @@ public class Query
         _commentRepository = commentRepository;
     }
 
-    [UsePaging (IncludeTotalCount = true, MaxPageSize = 25)]
+    [UsePaging(IncludeTotalCount = true, MaxPageSize = 25)]
     [UseProjection]
     [UseFiltering]
     [UseSorting]
     public IQueryable<Comment> GetComments()
     {
         try
-        {           
+        {
             return _commentRepository.GetAll();
         }
         catch (Exception ex)

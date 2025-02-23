@@ -1,13 +1,13 @@
-﻿using Common.Messaging.Interfaces;
-using RabbitMQ.Client.Exceptions;
+﻿using Common.Config;
+using Common.Messaging.Interfaces;
+using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Exceptions;
 using Serilog;
 using System.Text;
 using System.Text.Json;
-using Common.Config;
-using Microsoft.Extensions.Options;
 
-namespace Common.Messaging.Producers;   
+namespace Common.Messaging.Producers;
 public class RabbitMqProducer : IRabbitMqProducer, IAsyncDisposable
 {
     private readonly IConnectionFactory _connectionFactory;

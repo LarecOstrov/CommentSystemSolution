@@ -37,7 +37,7 @@ public class FileAttachmentRepository : IFileAttachmentRepository
     public async Task<FileAttachment> AddAsync(FileAttachment comment)
     {
         await _context.Files.AddAsync(comment);
-        if( await _context.SaveChangesAsync() > 0)
+        if (await _context.SaveChangesAsync() > 0)
         {
             return comment;
         }
@@ -57,7 +57,7 @@ public class FileAttachmentRepository : IFileAttachmentRepository
     public async Task<FileAttachment> UpdateAsync(FileAttachment comment)
     {
         _context.Files.Update(comment);
-        if( await _context.SaveChangesAsync() > 0)
+        if (await _context.SaveChangesAsync() > 0)
         {
             return comment;
         }

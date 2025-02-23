@@ -3,6 +3,6 @@
     public enum FileType
     {
         Image = 0,
-        Text= 1
+        Text = 1
     }
 }
