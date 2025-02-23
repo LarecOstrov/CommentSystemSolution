@@ -59,6 +59,12 @@
   height: 40px;
   border-radius: 50%;
 }
+.comment-text code {
+  white-space: pre;
+  overflow-x: auto;
+  display: block;
+  max-width: 100%;
+}
 
 .comment-actions {
   display: flex;
