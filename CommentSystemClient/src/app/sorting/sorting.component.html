@@ -1,0 +1,19 @@
+<div class="filters-container">
+  <div class="filters">
+    <button class="sortButton" [class.active]="sortBy === 'createdAt'" 
+      (click)="setSort('createdAt')">{{sortBy !== 'createdAt' ? '' : sortOrder === 'ASC' ? '⬆' : '⬇' }} Date</button>
+
+    <button class="sortButton" [class.active]="sortBy === 'userName'" 
+      (click)="setSort('userName')">{{sortBy !== 'userName' ? '' : sortOrder === 'ASC' ? '⬆' : '⬇' }} User</button>
+
+    <button class="sortButton" [class.active]="sortBy === 'email'" 
+      (click)="setSort('email')">{{ sortBy !== 'email' ? '' : sortOrder === 'ASC' ? '⬆' : '⬇' }} Email</button>
+  </div>
+
+  <!-- Кнопка "Say" -->
+  <div class="filters">
+    <button (click)="onToggleCommentForm()" class="say-button" [class.active]="!isCommentFormVisible">
+      {{ isCommentFormVisible ? '✖' : 'Say' }}
+    </button>
+  </div>
+</div>

@@ -2,51 +2,42 @@
   <div class="content">
     <h1>Speaking Room</h1>
 
-    <!-- filters and say button -->
-    <div class="filters-container">
-      <div class="filters">
-        <button class="sortButton" [class.active]="sortBy === 'createdAt'" 
-          (click)="setSort('createdAt')">{{sortBy !== 'createdAt' ? '' : sortOrder === 'ASC' ? '⬆' : '⬇' }} Date</button>
+    <!-- Sorting Component -->
+    <app-sorting 
+      [sortBy]="sortBy" 
+      [sortOrder]="sortOrder"
+      [isCommentFormVisible]="isCommentFormVisible"
+      (sortChange)="onSortChange($event)"
+      (toggleCommentForm)="toggleCommentForm()">
+    </app-sorting>
 
-        <button class="sortButton" [class.active]="sortBy === 'userName'" 
-          (click)="setSort('userName')">{{sortBy !== 'userName' ? '' : sortOrder === 'ASC' ? '⬆' : '⬇' }} User</button>
 
-        <button class="sortButton" [class.active]="sortBy === 'email'" 
-          (click)="setSort('email')">{{ sortBy !== 'email' ? '' : sortOrder === 'ASC' ? '⬆' : '⬇' }} Email</button>
-      </div>
-      <div class="filters">
-        <button (click)="toggleCommentForm()" (formClosed)="toggleCommentForm()" class="say-button" [class.active]="!isCommentFormVisible">
-          {{ isCommentFormVisible ? '✖' : 'Say' }}
-        </button>
-      </div>
-    </div>    
-    
-
-    <!-- comment form -->
+    <!-- Comment Form -->
     <app-comment-form 
       *ngIf="isCommentFormVisible" 
       (closeForm)="toggleCommentForm()" 
       (formClosed)="toggleCommentForm()"> 
     </app-comment-form>
 
-    <div class="pagination" *ngIf="!isCommentFormVisible">
-      <button (click)="goToFirstPage()" [disabled]="currentPage === 1">⏮ First</button>
-      <button (click)="previousPage()" [disabled]="currentPage === 1">◀ Prev</button>
-      <span>Page {{ currentPage }} of {{ totalPages }}</span>
-      <button (click)="nextPage()" [disabled]="!hasNextPage">Next ▶</button>
-      <button (click)="goToLastPage()" [disabled]="!hasNextPage">Last ⏭</button>
-    </div>
+    <!-- Pagination (Top) -->
+    <app-pagination 
+      [currentPage]="currentPage" 
+      [totalPages]="totalPages" 
+      [hasNextPage]="hasNextPage"
+      [hasPreviousPage]="hasPreviousPage"
+      [afterCursor]="afterCursor"
+      [beforeCursor]="beforeCursor"
+      (pageChange)="onPageChange($event)">
+    </app-pagination>
 
-    <!--  sceleton -->
-    <div *ngIf="isLoading">
-      <div class="skeleton-card" *ngFor="let _ of [1,2,3,4,5]">
-        <div class="skeleton-avatar"></div>
-        <div class="skeleton-text"></div>
-        <div class="skeleton-text small"></div>
-        <div class="skeleton-reply"></div>
-      </div>
-    </div>
-    <!-- main comments -->
+
+    <!-- Skeleton Loader -->
+    <app-skeleton-loader 
+      *ngIf="isLoading" 
+      [count]="5">
+    </app-skeleton-loader>
+
+    <!-- Comment List -->
     <app-comment-list *ngIf="!isLoading"
       [comments]="comments"
       [sortBy]="sortBy" 
@@ -54,13 +45,16 @@
       [highlightedComments]="highlightedComments">
     </app-comment-list>
 
-    <!-- pagination -->
-    <div class="pagination">
-      <button (click)="goToFirstPage()" [disabled]="currentPage === 1">⏮ First</button>
-      <button (click)="previousPage()" [disabled]="currentPage === 1">◀ Prev</button>
-      <span>Page {{ currentPage }} of {{ totalPages }}</span>
-      <button (click)="nextPage()" [disabled]="!hasNextPage">Next ▶</button>
-      <button (click)="goToLastPage()" [disabled]="!hasNextPage">Last ⏭</button>
-    </div>
+    <!-- Pagination (Bottom) -->
+    <app-pagination 
+      [currentPage]="currentPage" 
+      [totalPages]="totalPages" 
+      [hasNextPage]="hasNextPage"
+      [hasPreviousPage]="hasPreviousPage"
+      [afterCursor]="afterCursor"
+      [beforeCursor]="beforeCursor"
+      (pageChange)="onPageChange($event)">
+    </app-pagination>
+
   </div>
 </main>

@@ -234,10 +234,9 @@ button:disabled {
   padding-inline: 40px;
   min-height: 240px;
   min-width: 320px;
-  scrollbar-width: none;
-  /* Hide scrollbar for IE, Edge, and Firefox */
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  scrollbar-width: none;  
+  -ms-overflow-style: none;  
+  scrollbar-width: none;  
 }
 
 .comment-preview .image-wrapper {
@@ -282,8 +281,6 @@ button:disabled {
   background: rgba(128, 128, 128, 1);
 }
 
-
-
 .comment-preview .slider-btn {
   position: absolute;
   top: 50%;
@@ -293,7 +290,7 @@ button:disabled {
   border: none;
   padding: 5px 10px;
   cursor: pointer;
-  z-index: 10; /* Щоб кнопки були поверх зображень */
+  z-index: 10;
   transition: background 0.3s ease;
 }
 

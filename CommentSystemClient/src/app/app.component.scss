@@ -79,16 +79,13 @@
     .content {
       max-width: 500px;      
     }   
-  }
+  } 
   
-  /* Адаптація для мобільних пристроїв (екрани до 480px) */
   @media (max-width: 480px) {
     .content {
       max-width: 300px;      
     }      
-  }
-
-  
+  }  
 
   .content p {
     margin-top: 1.5rem;
@@ -151,15 +148,7 @@
       background: rgb(57, 57, 57);    
   }
 
-  .pagination {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 15px;
-  }
-  .pagination button {
-    min-height: 30px;
-  }
+  
   
   button {
     background: #000000;
@@ -248,7 +237,6 @@
     border-radius: 5px;
   }
   
-  /* sceleton animation */
   @keyframes pulse {
     0% { opacity: 1; }
     50% { opacity: 0.5; }

@@ -1,27 +1,29 @@
-import {  Component, OnInit} from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Apollo, gql } from 'apollo-angular';
-import { CommentFormComponent } from './comments/comment-form/comment-form.component';
-import { CommentListComponent } from './comments/comment-list/comment-list.component';
+import { CommentFormComponent } from './comment-form/comment-form.component';
+import { CommentListComponent } from './comment-list/comment-list.component';
 import { Comment, FileAttachment, FileType } from './models/comment.model';
-import { SortingField } from './models/sorting-field.type';
 import { WebSocketService } from './services/websocket.service';
 import { mapFileType } from './utils/filetype-utils';
+import { PaginationComponent } from './pagination/pagination.component';
+import { SortingComponent } from './sorting/sorting.component';
+import { SkeletonLoaderComponent } from './skeleton-loader/skeleton-loader.component';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
   standalone: true,
-  imports: [CommonModule, CommentFormComponent, CommentListComponent],
+  imports: [CommonModule, CommentFormComponent, CommentListComponent, PaginationComponent, SortingComponent, SkeletonLoaderComponent],
 })
-export class AppComponent implements OnInit{
+export class AppComponent implements OnInit {
   title = 'Speaking Room';
   sortBy = 'createdAt';
   sortOrder: 'ASC' | 'DESC' = 'DESC';
   isCommentFormVisible = false;
 
-  // pagination properties
+  // Параметри пагінації
   currentPage = 1;
   pageSize = 25;
   totalPages = 0;
@@ -33,55 +35,54 @@ export class AppComponent implements OnInit{
   isLoading = false;
   highlightedComments: Set<string> = new Set(); 
   highlightedReplies: Set<string> = new Set();
+
   constructor(private apollo: Apollo, private wsService: WebSocketService) {}
 
   ngOnInit() {
     this.wsService.newComment$.subscribe((comment) => {
       if (comment && comment.parentId === null) {
-        this.addComentToCommentTree(comment);
+        this.addCommentToCommentTree(comment);
       }
     });
-  
+
     this.fetchComments();
   }
 
-  addComentToCommentTree(comment: Comment) {  
+  addCommentToCommentTree(comment: Comment) {  
     let attachments: FileAttachment[] = [];
 
     if (comment.fileAttachments) {
       if (Array.isArray(comment.fileAttachments)) {
-        attachments = comment.fileAttachments as FileAttachment[];
+        attachments = comment.fileAttachments;
       } else if (typeof comment.fileAttachments === 'object' && '$values' in comment.fileAttachments) {
-        attachments = (comment.fileAttachments as any).$values as FileAttachment[];
+        attachments = (comment.fileAttachments as any).$values;
       }
     }
+
     const newComment: Comment = { 
       ...comment, 
       fileAttachments: attachments.map((att: FileAttachment) => ({
         id: att.id,
         commentId: att.commentId,
         url: att.url,
-        type: typeof att.type === 'string' 
-          ? att.type as FileType 
-          : mapFileType(att.type),
+        type: typeof att.type === 'string' ? att.type as FileType : mapFileType(att.type),
         createdAt: att.createdAt
       })),
       replies: [],
       hasMoreReplies: false
     };
 
-    if (!newComment.parentId          
-        && this.sortBy === 'createdAt'
-        && ((this.sortOrder === 'DESC' && this.currentPage === 1) 
-          || (this.sortOrder === 'ASC' && this.currentPage === this.totalPages))) {
+    if (!newComment.parentId && this.sortBy === 'createdAt' &&
+        ((this.sortOrder === 'DESC' && this.currentPage === 1) || 
+        (this.sortOrder === 'ASC' && this.currentPage === this.totalPages))) {
         this.comments = this.sortOrder === 'DESC' ? [newComment, ...this.comments] : [...this.comments, newComment];
         this.sortOrder === 'DESC' ? this.comments.pop() : this.comments.shift();
 
-        this.highlightedComments = new Set([...this.highlightedComments, comment.id]);      
+        this.highlightedComments = new Set([...this.highlightedComments, comment.id]);
 
-      setTimeout(() => {
-        this.highlightedComments.delete(newComment.id);
-      }, 3000);
+        setTimeout(() => {
+          this.highlightedComments.delete(newComment.id);
+        }, 3000);
     }         
   }  
     
@@ -103,12 +104,12 @@ export class AppComponent implements OnInit{
         }
       }
     `;
-
+  
     const variables: any = {
       sort: [{ createdAt: this.sortOrder }],
       where: { parentId: { eq: null } },
     };
-
+  
     if (this.currentPage === 1) {
       variables.first = this.pageSize;
       variables.after = null;
@@ -126,7 +127,7 @@ export class AppComponent implements OnInit{
       variables.after = this.afterCursor;
       variables.before = null;
     }
-
+  
     this.apollo.watchQuery<{ comments: { nodes: Comment[], pageInfo: { hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }, totalCount: number } }>(
       {
         query: GET_COMMENTS,
@@ -144,21 +145,20 @@ export class AppComponent implements OnInit{
     });
   }
   
-  setSort(field: string) {
-    this.closeCommentForm();
-    if (this.sortBy === field) {
-      this.toggleSortOrder();
-    } else {
-      this.sortBy = field;
-      this.sortOrder = field === 'createdAt' ? 'DESC' : 'ASC';
-    }
-    this.resetPagination();
+
+  onSortChange(event: { field: string, order: 'ASC' | 'DESC' }) {
+    this.currentPage = 1;
+    this.afterCursor = null;
+    this.beforeCursor = null;
+    this.sortBy = event.field;
+    this.sortOrder = event.order;
     this.fetchComments();
   }
 
-  toggleSortOrder() {
-    this.sortOrder = this.sortOrder === 'ASC' ? 'DESC' : 'ASC';
-    this.resetPagination();
+  onPageChange(event: { page: number, afterCursor: string | null, beforeCursor: string | null }) {
+    this.currentPage = event.page;
+    this.afterCursor = event.afterCursor;
+    this.beforeCursor = event.beforeCursor;
     this.fetchComments();
   }
 
@@ -168,41 +168,5 @@ export class AppComponent implements OnInit{
 
   closeCommentForm() {
     this.isCommentFormVisible = false;
-  }
-
-  resetPagination() {
-    this.currentPage = 1;
-    this.afterCursor = null;
-    this.beforeCursor = null;
-  }
-
-  nextPage() {
-    if (this.hasNextPage) {
-      this.currentPage++;
-      this.beforeCursor = null;
-      this.fetchComments();
-    }
-  }
-
-  previousPage() {
-    if (this.currentPage > 1) {
-      this.currentPage--;
-      this.afterCursor = null;
-      this.fetchComments();
-    }
-  }
-
-  goToFirstPage() {
-    this.currentPage = 1;
-    this.afterCursor = null;
-    this.beforeCursor = null;
-    this.fetchComments();
-  }
-
-  goToLastPage() {
-    this.currentPage = this.totalPages;
-    this.afterCursor = null;
-    this.beforeCursor = null;
-    this.fetchComments();
   }
 }

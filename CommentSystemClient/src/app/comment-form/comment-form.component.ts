@@ -2,10 +2,10 @@ import { Component, Input, Output, EventEmitter, ViewChild, ElementRef} from '@a
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { BbcodePipe } from '../../pipes/bbcode.pipe';
+import { BbcodePipe } from '../pipes/bbcode.pipe';
 import Swal from 'sweetalert2';
-import { areFilesValid } from '../../utils/filetype-utils';
-import { validateBBCode, validateHtml } from '../../utils/tag-utils';
+import { areFilesValid } from '../utils/filetype-utils';
+import { validateBBCode, validateHtml } from '../utils/tag-utils';
 
 @Component({
   selector: 'app-comment-form',

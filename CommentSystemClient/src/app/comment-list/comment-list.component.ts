@@ -2,10 +2,10 @@ import { Component, Input, ViewChildren, ElementRef, QueryList } from '@angular/
 import { Apollo, gql } from 'apollo-angular';
 import { CommonModule } from '@angular/common';
 import { CommentFormComponent } from '../comment-form/comment-form.component'; 
-import { Comment, FileAttachment, FileType, User } from '../../models/comment.model'; 
-import { BbcodePipe } from '../../pipes/bbcode.pipe';
-import { mapFileType } from '../../utils/filetype-utils';
-import { WebSocketService } from '../../services/websocket.service';
+import { Comment, FileAttachment, FileType, User } from '../models/comment.model'; 
+import { BbcodePipe } from '../pipes/bbcode.pipe';
+import { mapFileType } from '../utils/filetype-utils';
+import { WebSocketService } from '../services/websocket.service';
 
 
 @Component({
