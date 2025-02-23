@@ -1,0 +1,43 @@
+<form *ngIf="!isFormSubmitted && !isPreviewVisible" [formGroup]="commentForm" (ngSubmit)="submitComment()" class="comment-form">
+  <div class="form-group">
+    <input id="userName" formControlName="userName" placeholder="User Name"
+           [class.invalid]="isFieldInvalid('userName')" required />
+
+    <input id="email" formControlName="email" type="email" placeholder="Email"
+           [class.invalid]="isFieldInvalid('email')" required />
+
+    <input id="homePage" formControlName="homePage" type="url" placeholder="Home Page (optional)"
+           [class.invalid]="isFieldInvalid('homePage')" />
+  </div>
+
+  <app-text-editor 
+    [text]="textContent" 
+    [selectedFiles]="selectedFiles"
+    [isTextInvalid]="isFieldInvalid('text')"
+    (textChange)="handleTextChange($event)" 
+    (charCountChange)="handleCharCountChange($event)"
+    (filesChange)="handleFilesChange($event)"
+    [placeholder]="'Type your comment here...'">
+  </app-text-editor>
+
+  <app-captcha 
+    [isCaptchaInvalid]="isFieldInvalid('captcha')"
+    (captchaKeyChange)="commentForm.patchValue({ captchaKey: $event })"
+    (captchaChange)="commentForm.patchValue({ captcha: $event })">
+  </app-captcha>
+
+
+  <div class="sendbar">
+    <button type="button" (click)="previewComment()">Preview</button>
+    <button type="submit">Submit</button>
+  </div>
+</form>
+
+<app-preview-comment 
+  *ngIf="isPreviewVisible"
+  [commentText]="textContent"
+  [username]="commentForm.value.userName"
+  [email]="commentForm.value.email"
+  [attachments]="selectedFiles"
+  (edit)="editComment()">
+</app-preview-comment>

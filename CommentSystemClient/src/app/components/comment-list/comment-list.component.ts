@@ -1,4 +1,4 @@
-import { Component, Input, ViewChildren, ElementRef, QueryList } from '@angular/core';
+import { Component, Input, ViewChildren, ElementRef, QueryList, OnInit, OnDestroy  } from '@angular/core';
 import { Apollo, gql } from 'apollo-angular';
 import { CommonModule } from '@angular/common';
 import { CommentFormComponent } from '../comment-form/comment-form.component'; 
@@ -6,7 +6,9 @@ import { Comment, FileAttachment, FileType, User } from '../../models/comment.mo
 import { BbcodePipe } from '../../pipes/bbcode.pipe';
 import { mapFileType } from '../../utils/filetype-utils';
 import { WebSocketService } from '../../services/websocket.service';
-
+import { Subscription } from 'rxjs';
+import { SwalAlerts } from '../../utils/swal-alerts';
+import { debounceTime } from 'rxjs/operators';
 
 @Component({
   selector: 'app-comment-list',
@@ -15,7 +17,7 @@ import { WebSocketService } from '../../services/websocket.service';
   standalone: true,
   imports: [CommonModule, CommentFormComponent, BbcodePipe], 
 })
-export class CommentListComponent {
+export class CommentListComponent implements OnInit, OnDestroy {
   @Input() comments: Comment[] = [];
   @ViewChildren('sliderRef') sliders!: QueryList<ElementRef>;
   @Input() parentId: string | null = null;
@@ -31,55 +33,71 @@ export class CommentListComponent {
   openReplyForms: Set<string> = new Set();
   openReplies: Set<string> = new Set();
   replyPagination: Map<string, { afterCursor: string | null; hasMore: boolean }> = new Map();
-
+  wsSubscription!: Subscription;
+  
   constructor(private apollo: Apollo, private wsService: WebSocketService) {}
 
   ngOnInit() {
-    this.wsService.newComment$.subscribe((comment) => {
+    this.wsSubscription = this.wsService.newComment$
+    .pipe(debounceTime(500))
+    .subscribe((comment) => { 
       if (comment && comment.parentId) {                  
         this.addReplyToCommentTree(comment);        
       }
-    });  
+    });
   }
 
-  private addReplyToCommentTree(comment: Comment) {   
+  ngOnDestroy() {
+    if (this.wsSubscription) {
+      this.wsSubscription.unsubscribe();
+    }
+  }  
+
+  trackByCommentId(index: number, comment: Comment) {
+    return comment.id;
+  }
+
+  addReplyToCommentTree(comment: Comment) {   
     const parentComment = this.findCommentById(comment.parentId, this.comments);
     
     if (!parentComment) return;
+
+    if (!parentComment.replies.some(existingComment => existingComment.id === comment.id)) {   
   
-    let attachments: FileAttachment[] = [];  
-    if (comment.fileAttachments) {
-      if (Array.isArray(comment.fileAttachments)) {
-        attachments = comment.fileAttachments as FileAttachment[];
-      } else if (typeof comment.fileAttachments === 'object' && '$values' in comment.fileAttachments) {
-        attachments = (comment.fileAttachments as any).$values as FileAttachment[];
-      }
-    }  
+      let attachments: FileAttachment[] = [];  
+      if (comment.fileAttachments) {
+        if (Array.isArray(comment.fileAttachments)) {
+          attachments = comment.fileAttachments as FileAttachment[];
+        } else if (typeof comment.fileAttachments === 'object' && '$values' in comment.fileAttachments) {
+          attachments = (comment.fileAttachments as any).$values as FileAttachment[];
+        }
+      }  
 
-    const newComment: Comment = { 
-      ...comment, 
-      user: comment.user as User,
-      fileAttachments: attachments.map((att: FileAttachment) => ({
-        id: att.id,
-        commentId: att.commentId,
-        url: att.url,
-        type: typeof att.type === 'string' 
-          ? att.type as FileType 
-          : mapFileType(att.type),
-        createdAt: att.createdAt
-      })),
-      replies: [],
-      hasMoreReplies: false,
-    };
+      const newComment: Comment = { 
+        ...comment, 
+        user: comment.user as User,
+        fileAttachments: attachments.map((att: FileAttachment) => ({
+          id: att.id,
+          commentId: att.commentId,
+          url: att.url,
+          type: typeof att.type === 'string' 
+            ? att.type as FileType 
+            : mapFileType(att.type),
+          createdAt: att.createdAt
+        })),
+        replies: [],
+        hasMoreReplies: false,
+      };
+      
+      if (!this.isRepliesOpen(comment.parentId)) {
+        return;      
+      }  
+      
+      parentComment.replies = [newComment, ...parentComment.replies];
+      parentComment.hasReplies = true;
+      this.comments = [...this.comments];    
+    }
     
-    if (!this.isRepliesOpen(comment.parentId)) {
-      return;      
-    }  
-    
-    parentComment.replies = [newComment, ...parentComment.replies];
-    parentComment.hasReplies = true;
-    this.comments = [...this.comments];
-
     this.highlightedComments = new Set([...this.highlightedComments, comment.id]);      
 
     setTimeout(() => {
@@ -137,39 +155,42 @@ export class CommentListComponent {
           order: [{ createdAt: sortOrder }]
         },
       }
-    ).valueChanges.subscribe(({ data }) => {
-      if (!data || !data.comments) return;
+    ).valueChanges.subscribe({
+      next: ({ data }) => {
+        if (!data || !data.comments) return;
   
-      let parentComment = this.findCommentById(parentId, this.comments);
-      if (!parentComment) {
-        return;
+        let parentComment = this.findCommentById(parentId, this.comments);
+        if (!parentComment) return;
+  
+        const updatedParentComment = { ...parentComment };
+        if (!updatedParentComment.replies) {
+          updatedParentComment.replies = [];
+        }
+  
+        const newReplies = data.comments.nodes.filter(reply =>
+          !updatedParentComment.replies?.some(existingReply => existingReply.id === reply.id)
+        );
+  
+        updatedParentComment.replies = [...updatedParentComment.replies, ...newReplies];
+        updatedParentComment.hasMoreReplies = data.comments.pageInfo.hasNextPage;
+  
+        this.comments = this.comments.map(comment =>
+          comment.id === updatedParentComment.id ? updatedParentComment : comment
+        );
+  
+        this.replyPagination.set(parentId, {
+          afterCursor: data.comments.pageInfo.endCursor || null,
+          hasMore: data.comments.pageInfo.hasNextPage,
+        });
+  
+        this.isLoadingRepliesMap.set(parentId, false);
+      },
+      error: (err) => {
+        SwalAlerts.showError('Failed to fetch replies. Please try again later.');
+        this.isLoadingRepliesMap.set(parentId, false);
       }
-  
-      const updatedParentComment = { ...parentComment };
-  
-      if (!updatedParentComment.replies) {
-        updatedParentComment.replies = [];
-      }
-  
-      const newReplies = data.comments.nodes.filter(reply =>
-        !updatedParentComment.replies?.some(existingReply => existingReply.id === reply.id)
-      );
-  
-      updatedParentComment.replies = [...updatedParentComment.replies, ...newReplies];
-      updatedParentComment.hasMoreReplies = data.comments.pageInfo.hasNextPage;
-  
-      this.comments = this.comments.map(comment =>
-        comment.id === updatedParentComment.id ? updatedParentComment : comment
-      );
-  
-      this.replyPagination.set(parentId, {
-        afterCursor: data.comments.pageInfo.endCursor || null,
-        hasMore: data.comments.pageInfo.hasNextPage,
-      });
-  
-      this.isLoadingRepliesMap.set(parentId, false);
     });
-  }  
+  }
   
   loadMoreReplies(parentId: string) {
     const pagination = this.replyPagination.get(parentId);
@@ -191,7 +212,7 @@ export class CommentListComponent {
   
     setTimeout(() => {
       window.scrollTo({ top: lastCommentTop, behavior: 'auto' });
-    }, 100);
+    }, 200);
   }   
 
   changeRepliesSortOrder(parentId: string) {    
@@ -212,19 +233,23 @@ export class CommentListComponent {
   }
 
   findCommentById(commentId: string, comments: Comment[]): Comment | null {
-    for (let comment of comments) {
+    let stack = [...comments];
+  
+    while (stack.length) {
+      const comment = stack.pop();
+      if (!comment) continue;
+  
       if (comment.id === commentId) {
         return comment;
       }
+  
       if (comment.replies && comment.replies.length > 0) {
-        const foundComment = this.findCommentById(commentId, comment.replies);
-        if (foundComment) {
-          return foundComment;
-        }
+        stack.push(...comment.replies);
       }
-    }
+    }  
     return null;
-  }  
+  }
+  
 
   toggleReplyForm(commentId: string) {
     this.openReplyForms.has(commentId) ? this.openReplyForms.delete(commentId) : this.openReplyForms.add(commentId);

@@ -10,6 +10,7 @@ export function createApollo(): ApolloClientOptions<any> {
       uri: (window as any).env?.getCommentsGraphQL || 'http://localhost:5000/graphql',
     }),
     cache: new InMemoryCache(),
+    connectToDevTools: false,
   };
 }
 
