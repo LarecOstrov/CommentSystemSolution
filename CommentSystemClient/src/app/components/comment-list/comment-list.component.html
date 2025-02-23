@@ -1,8 +1,7 @@
 <div class="comments-container">
   <div class="comment-stream">
 
-    <!-- main comments --> 
-    <div *ngFor="let comment of comments" class="comment-card"
+    <div *ngFor="let comment of comments; trackBy: trackByCommentId" class="comment-card"
     [id]="'comment-' + comment.id"
     [class.new-comment]="highlightedComments.has(comment.id)" clas>
       <div class="comment-header">
@@ -15,7 +14,6 @@
       <p class="comment-text" [innerHTML]="comment.text | bbcode"></p>
       
       
-      <!-- Attachments (Images) -->
       <div *ngIf="comment.fileAttachments?.length && comment.fileAttachments.length > 0" class="attachments">
         <div *ngIf="getImageAttachments(comment.fileAttachments)" class="image-slider">
           <button class="slider-btn left" (click)="scrollImages(comment.id, 'left')">❮</button>
@@ -30,7 +28,6 @@
           <button class="slider-btn right" (click)="scrollImages(comment.id, 'right')">❯</button>
         </div>
 
-        <!-- Attachments (Text Files) -->
         <div class="text-files">
           <div *ngFor="let file of getTextAttachments(comment.fileAttachments)" class="text-file">
             <span alt="Text File" class="file-icon">📄</span>
@@ -62,14 +59,12 @@
               
       </div>
 
-      <!-- reply form -->
       <app-comment-form *ngIf="isReplyFormOpen(comment.id)"
                         [parentId]="comment.id"
                         (commentAdded)="onReplyAdded(comment.id)"
                         (cancel)="toggleReplyForm(comment.id)">
       </app-comment-form>
 
-      <!-- replies -->
       <div *ngIf="isRepliesOpen(comment.id)" class="replies-container">
         
         <app-comment-list *ngIf="!isRepliesLoading(comment.id)" 
@@ -80,12 +75,10 @@
         <div *ngIf="isRepliesLoading(comment.id)" class="replies-loader"></div>
 
         <div class="replies-pagination">
-          <!-- collapse button -->
           <button *ngIf="replyPagination.get(comment.id)?.hasMore || (comment.replies && comment.replies.length > 25)" 
                   (click)="collapseReplies(comment.id)">
                   ✖
           </button>
-          <!-- more button -->
           <button *ngIf="replyPagination.get(comment.id)?.hasMore"
                   (click)="loadMoreReplies(comment.id)">
             More

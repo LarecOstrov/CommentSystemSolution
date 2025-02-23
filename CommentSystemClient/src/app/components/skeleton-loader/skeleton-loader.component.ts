@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 @Component({
   selector: 'app-skeleton-loader',
   standalone: true,
-  imports: [CommonModule], // ✅ Ensure CommonModule is imported
+  imports: [CommonModule],
   templateUrl: './skeleton-loader.component.html',
   styleUrls: ['./skeleton-loader.component.scss'],
 })

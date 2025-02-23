@@ -1,0 +1,65 @@
+.comment-form {
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+  font-family: 'Arial', sans-serif;
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.form-group {
+  display: flex;
+  flex-wrap: wrap; 
+  justify-content: space-between;
+  gap: 10px; 
+  margin-bottom: 20px;
+}
+
+.form-group input {
+  flex: 1;
+  min-width: 28%; 
+  max-width: 96.5%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+input.invalid, textarea.invalid {
+  border: 2px solid rgb(255, 185, 185);
+  background-color: #ffe6e6;
+}
+
+@media (max-width: 600px) {
+  .form-group {
+    flex-direction: column; 
+  }
+
+  .form-group input {
+    width: 100%; 
+  }
+}
+
+.sendbar {
+  display: flex;
+  flex-direction: row;
+  justify-content: right;
+  align-items: right;
+  gap: 10px;
+
+  button {
+    background: black;
+    color: white;
+    padding: 10px;
+    min-width: 80px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+
+  button:hover {
+    background: rgb(57, 57, 57);
+  }
+}

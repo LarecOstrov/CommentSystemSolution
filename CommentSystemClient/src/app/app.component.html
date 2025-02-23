@@ -15,8 +15,8 @@
     <!-- Comment Form -->
     <app-comment-form 
       *ngIf="isCommentFormVisible" 
-      (closeForm)="toggleCommentForm()" 
-      (formClosed)="toggleCommentForm()"> 
+      (commentAdded)="onCommentAdded()"  
+      (closeForm)="isCommentFormVisible = false"> 
     </app-comment-form>
 
     <!-- Pagination (Top) -->

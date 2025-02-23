@@ -1,14 +1,16 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy  } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Apollo, gql } from 'apollo-angular';
-import { CommentFormComponent } from './comment-form/comment-form.component';
-import { CommentListComponent } from './comment-list/comment-list.component';
+import { CommentFormComponent } from './components/comment-form/comment-form.component';
+import { CommentListComponent } from './components/comment-list/comment-list.component';
 import { Comment, FileAttachment, FileType } from './models/comment.model';
 import { WebSocketService } from './services/websocket.service';
 import { mapFileType } from './utils/filetype-utils';
-import { PaginationComponent } from './pagination/pagination.component';
-import { SortingComponent } from './sorting/sorting.component';
-import { SkeletonLoaderComponent } from './skeleton-loader/skeleton-loader.component';
+import { PaginationComponent } from './components/pagination/pagination.component';
+import { SortingComponent } from './components/sorting/sorting.component';
+import { SkeletonLoaderComponent } from './components/skeleton-loader/skeleton-loader.component';
+import { Subscription } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
@@ -17,13 +19,13 @@ import { SkeletonLoaderComponent } from './skeleton-loader/skeleton-loader.compo
   standalone: true,
   imports: [CommonModule, CommentFormComponent, CommentListComponent, PaginationComponent, SortingComponent, SkeletonLoaderComponent],
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy  {
+  private commentSubscription!: Subscription;
   title = 'Speaking Room';
   sortBy = 'createdAt';
   sortOrder: 'ASC' | 'DESC' = 'DESC';
   isCommentFormVisible = false;
-
-  // Параметри пагінації
+ 
   currentPage = 1;
   pageSize = 25;
   totalPages = 0;
@@ -39,8 +41,10 @@ export class AppComponent implements OnInit {
   constructor(private apollo: Apollo, private wsService: WebSocketService) {}
 
   ngOnInit() {
-    this.wsService.newComment$.subscribe((comment) => {
-      if (comment && comment.parentId === null) {
+    this.commentSubscription = this.wsService.newComment$
+    .pipe(debounceTime(500))
+    .subscribe((comment) => {
+      if (comment?.parentId === null) {
         this.addCommentToCommentTree(comment);
       }
     });
@@ -48,6 +52,12 @@ export class AppComponent implements OnInit {
     this.fetchComments();
   }
 
+  ngOnDestroy() {
+    if (this.commentSubscription) {
+      this.commentSubscription.unsubscribe();
+    }
+  }
+  
   addCommentToCommentTree(comment: Comment) {  
     let attachments: FileAttachment[] = [];
 
@@ -165,8 +175,8 @@ export class AppComponent implements OnInit {
   toggleCommentForm() {
     this.isCommentFormVisible = !this.isCommentFormVisible;
   }
-
-  closeCommentForm() {
-    this.isCommentFormVisible = false;
-  }
+  
+  onCommentAdded() {
+    this.isCommentFormVisible = false; 
+  }  
 }
