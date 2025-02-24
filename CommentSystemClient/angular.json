@@ -52,12 +52,24 @@
                   "maximumError": "8kB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "src/assets/environment.json",
+                  "with": "src/assets/environment.Production.json"
+                }
+              ]
             },
             "development": {
               "optimization": false,
               "extractLicenses": false,
-              "sourceMap": true
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/assets/environment.json",
+                  "with": "src/assets/environment.Development.json"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
