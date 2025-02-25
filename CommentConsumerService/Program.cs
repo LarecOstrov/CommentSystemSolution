@@ -33,12 +33,7 @@ try
     // WebSockets
     app.UseWebSockets();
     app.MapHub<WebSocketHub>("/ws");
-    app.Urls.Add($"http://0.0.0.0:{appOptions.WebSoketPort}");
-    app.Urls.Add($"http://[::]:{appOptions.WebSoketPort}");
-
-    Log.Information($"Urls added for webscoket: http://0.0.0.0:{appOptions.WebSoketPort}");
-    Log.Information($"Urls added for webscoket: http://[::]:{appOptions.WebSoketPort}");
-
+    
     Log.Information("Starting Web Application...");
 
     await app.RunAsync();

@@ -114,7 +114,6 @@ export class CommentFormComponent {
     if (this.parentId) {
       formData.append('parentId', this.parentId);
     }
-    console.log(this.selectedFiles);
     this.selectedFiles.forEach((fileObj, index) => {
       formData.append(`fileAttachments`, fileObj.file, fileObj.name);
     });
