@@ -26,10 +26,12 @@ services:
     ports:
       - "5000:5000"
       - "5001:5001"
+    env_file:
+      - .env
     environment:
       <<: *common-environment
-      AppOptions__AzureBlobStorage__ConnectionString: "DefaultEndpointsProtocol=https;AccountName=commentsystemstorage;AccountKey=3VXV9erOiP7q57DuRFXvE8jOtuX9TPVm2HK/fVCbfcNGcw8p5mI79DYPyQouRKRf/GIKzKYVw5qT+AStHUlQjQ==;EndpointSuffix=core.windows.net"
-      AppOptions__AzureBlobStorage__ContainerName: "comment-files"
+      AppOptions__AzureBlobStorage__ConnectionString: ${AZURE_STORAGE_CONNECTION}
+      AppOptions__AzureBlobStorage__ContainerName: ${AZURE_STORAGE_CONTAINER}
       ASPNETCORE_URLS: http://+:5000;http://+:5001
     depends_on:
       db:
