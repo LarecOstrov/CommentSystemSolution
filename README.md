@@ -147,7 +147,7 @@ curl http://localhost:4200
 
 ## Deploying with Nginx
 ### 1. Configure Nginx Proxy
-Ensure the correct **Production** environment settings are in place:
+Ensure the correct **Production** environment settings are in Angular client environment.json:
 ```json
 {
   "production": true,
