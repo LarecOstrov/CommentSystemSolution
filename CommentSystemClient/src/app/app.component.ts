@@ -86,7 +86,9 @@ export class AppComponent implements OnInit, OnDestroy  {
         ((this.sortOrder === 'DESC' && this.currentPage === 1) || 
         (this.sortOrder === 'ASC' && this.currentPage === this.totalPages))) {
         this.comments = this.sortOrder === 'DESC' ? [newComment, ...this.comments] : [...this.comments, newComment];
-        this.sortOrder === 'DESC' ? this.comments.pop() : this.comments.shift();
+        if (this.comments.length >= this.pageSize) {
+          this.sortOrder === 'DESC' ? this.comments.pop() : this.comments.shift();
+        }
 
         this.highlightedComments = new Set([...this.highlightedComments, comment.id]);
 
