@@ -33,8 +33,8 @@ sudo nano .env
 ```
 Add AZURE_STORAGE_CONNECTION and AZURE_STORAGE_CONTAINER values.
 ```
-AZURE_STORAGE_CONNECTION="StorageConnectionString"
-AZURE_STORAGE_CONTAINER="StorageContainer"
+AZURE_STORAGE_CONNECTION="<Your Storage Connection String>"
+AZURE_STORAGE_CONTAINER="<Your Storage Container Name>"
 ```
 
 Save and exit (`CTRL+O`, `Enter`, `CTRL+X`).
