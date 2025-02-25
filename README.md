@@ -96,7 +96,7 @@ source ~/.bashrc
 Use the **Development** environment settings:
 ```sh
 cp CommentSystemSolution/CommentSystemClient/src/assets/environment.Development.json \
-   CommentSystemSolution/CommentSystemClient/src/assets/environment.Production.json
+   CommentSystemSolution/CommentSystemClient/src/assets/environment.json
 ```
 
 ### 2. Start the Application with Docker
