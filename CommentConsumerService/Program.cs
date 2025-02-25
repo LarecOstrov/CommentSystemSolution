@@ -31,7 +31,13 @@ try
     app.UseCors(appOptions.Cors.CommentService.AllowedOrigins.Any() ? "AllowSpecificOrigins" : "AllowAll");
 
     // WebSockets
+    app.UseWebSockets();
     app.MapHub<WebSocketHub>("/ws");
+    app.Urls.Add($"http://0.0.0.0:{appOptions.WebSoketPort}");
+    app.Urls.Add($"http://[::]:{appOptions.WebSoketPort}");
+
+    Log.Information($"Urls added for webscoket: http://0.0.0.0:{appOptions.WebSoketPort}");
+    Log.Information($"Urls added for webscoket: http://[::]:{appOptions.WebSoketPort}");
 
     Log.Information("Starting Web Application...");
 
@@ -113,8 +119,10 @@ void ConfigureServicesAsync(IServiceCollection services, AppOptions appOptions)
                     .AllowAnyMethod()
                     .AllowAnyHeader()
                     .AllowCredentials()
-                    .WithExposedHeaders("Sec-WebSocket-Accept"));
-        }
+                    .WithExposedHeaders("Sec-WebSocket-Accept")
+                    .SetIsOriginAllowedToAllowWildcardSubdomains()
+                    .WithHeaders("Sec-WebSocket-Version", "Sec-WebSocket-Key", "Upgrade", "Connection"));
+            }
         else
         {
             Log.Warning("CORS is misconfigured: No allowed origins specified.");
@@ -123,7 +131,9 @@ void ConfigureServicesAsync(IServiceCollection services, AppOptions appOptions)
                 builder.AllowAnyOrigin()
                 .AllowAnyMethod()
                 .AllowAnyHeader()
-                .WithExposedHeaders("Sec-WebSocket-Accept"));
+                .WithExposedHeaders("Sec-WebSocket-Accept")
+                .SetIsOriginAllowedToAllowWildcardSubdomains()
+                .WithHeaders("Sec-WebSocket-Version", "Sec-WebSocket-Key", "Upgrade", "Connection"));
         }
     });
 }

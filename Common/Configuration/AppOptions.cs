@@ -10,6 +10,7 @@ public class AppOptions
     public required RedisOptions Redis { get; init; }
     public required RabbitMqOptions RabbitMq { get; init; }
     public required CaptchaSettings CaptchaSettings { get; init; }
+    public required string WebSoketPort { get; init; }
 }
 public class IpRateLimit
 {

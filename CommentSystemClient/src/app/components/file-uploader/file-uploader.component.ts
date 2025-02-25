@@ -26,6 +26,12 @@ export class FileUploaderComponent {
 
     for (const file of files) {
       let finalFile = file;
+      if (file.type.includes('text') && file.size > 1024 * 100) {      
+        SwalAlerts.showInfo('Text files must be less than 100KB.');
+        event.target.value = null;
+        return;
+      }
+
       if (file.type.includes('image')) {
         finalFile = await this.resizeImage(file, 320, 240);
       }

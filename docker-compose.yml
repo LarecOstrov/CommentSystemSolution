@@ -7,7 +7,7 @@ x-environment: &common-environment
   AppOptions__RabbitMq__UserName: CommentSystemAdmin
   AppOptions__RabbitMq__Password: CommentSystem!2025  
   AppOptions__ConnectionStrings__DefaultConnection: "Server=db;Database=CommentSystemDB;User Id=SA;Password=CommentSystem!2025;TrustServerCertificate=True"
-
+  AppOptions__WebSoketPort: "5002"
 
 services:
   client:
