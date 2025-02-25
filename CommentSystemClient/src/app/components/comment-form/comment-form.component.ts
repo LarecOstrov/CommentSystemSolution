@@ -22,6 +22,7 @@ import { SwalAlerts } from '../../utils/swal-alerts';
 })
 export class CommentFormComponent {
   @ViewChild('sliderRef', { static: false }) sliderRef!: ElementRef;
+  @ViewChild(CaptchaComponent) captchaComponent!: CaptchaComponent;
   @Input() parentId: string | null = null;
   @Output() commentAdded = new EventEmitter<void>();
   @Output() cancel = new EventEmitter<void>();
@@ -131,6 +132,7 @@ export class CommentFormComponent {
         this.isFormSubmitted = true;
       },
       error: (error: HttpErrorResponse) => {
+
         let errorMessage = 'Failed to add comment. Please try again later.';
   
         if (error.error) {
@@ -146,6 +148,9 @@ export class CommentFormComponent {
         }
   
         SwalAlerts.showError(errorMessage);
+        
+        this.captchaComponent.requestCaptcha();
+        this.commentForm.patchValue({ captcha: '' });
       },
     });
   }
