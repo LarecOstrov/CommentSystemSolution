@@ -16,6 +16,7 @@ export class FileUploaderComponent {
 
   async onFileSelected(event: any) {
     const allowedFormats = ['image/jpeg', 'image/png', 'image/gif', 'text/plain'];
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'txt'];
     if (event.target.files.length + this.selectedFiles.length > 6) {
       SwalAlerts.showInfo('Maximum 6 files allowed.');
       event.target.value = null;
@@ -34,6 +35,13 @@ export class FileUploaderComponent {
         return;
       }
       
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+        SwalAlerts.showInfo('Invalid file extension: ' + file.name);
+        event.target.value = null;
+        return;
+      }
+
       if (file.size === 0) 
       {
         SwalAlerts.showInfo('Empty file: ' + file.name);
