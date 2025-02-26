@@ -38,6 +38,7 @@ export class CommentListComponent implements OnInit, OnDestroy {
   constructor(private apollo: Apollo, private wsService: WebSocketService) {}
 
   ngOnInit() {
+    console.log('comments', this.comments);
     this.wsSubscription = this.wsService.newComment$
     .pipe(debounceTime(500))
     .subscribe((comment) => { 
@@ -59,11 +60,11 @@ export class CommentListComponent implements OnInit, OnDestroy {
 
   addReplyToCommentTree(comment: Comment) {   
     const parentComment = this.findCommentById(comment.parentId, this.comments);
-    
+
     if (!parentComment) return;
 
     if (!parentComment.replies.some(existingComment => existingComment.id === comment.id)) {   
-  
+      console.log('Adding reply:', comment.id, 'to parent:', parentComment.id);
       let attachments: FileAttachment[] = [];  
       if (comment.fileAttachments) {
         if (Array.isArray(comment.fileAttachments)) {
@@ -87,17 +88,17 @@ export class CommentListComponent implements OnInit, OnDestroy {
         })),
         replies: [],
         hasMoreReplies: false,
-      };
-      
-      if (!this.isRepliesOpen(comment.parentId)) {
-        return;      
-      }  
+      };     
       
       parentComment.replies = [newComment, ...parentComment.replies];
       parentComment.hasReplies = true;
       this.comments = [...this.comments];    
+
+      if (!this.isRepliesOpen(comment.parentId)) {
+        return;      
+      }  
     }
-    
+
     this.highlightedComments = new Set([...this.highlightedComments, comment.id]);      
 
     setTimeout(() => {
@@ -126,6 +127,7 @@ export class CommentListComponent implements OnInit, OnDestroy {
   }
   
   fetchReplies(parentId: string, afterCursor: string | null = null, sortOrder: 'DESC' | 'ASC' = 'DESC') {
+    console.log('fetchReplies', parentId, afterCursor, sortOrder);
     this.isLoadingRepliesMap.set(parentId, true);
   
     const GET_REPLIES = gql`
