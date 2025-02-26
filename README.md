@@ -32,6 +32,10 @@ Add Azure cloud storage credentials:
 sudo nano .env
 ```
 Add AZURE_STORAGE_CONNECTION and AZURE_STORAGE_CONTAINER values.
+```
+AZURE_STORAGE_CONNECTION="<Your Storage Connection String>"
+AZURE_STORAGE_CONTAINER="<Your Storage Container Name>"
+```
 
 Save and exit (`CTRL+O`, `Enter`, `CTRL+X`).
 
@@ -92,7 +96,7 @@ source ~/.bashrc
 Use the **Development** environment settings:
 ```sh
 cp CommentSystemSolution/CommentSystemClient/src/assets/environment.Development.json \
-   CommentSystemSolution/CommentSystemClient/src/assets/environment.Production.json
+   CommentSystemSolution/CommentSystemClient/src/assets/environment.json
 ```
 
 ### 2. Start the Application with Docker
@@ -143,7 +147,7 @@ curl http://localhost:4200
 
 ## Deploying with Nginx
 ### 1. Configure Nginx Proxy
-Ensure the correct **Production** environment settings are in place:
+Ensure the correct **Production** environment settings are in Angular client environment.json:
 ```json
 {
   "production": true,
