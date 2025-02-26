@@ -15,17 +15,33 @@ export class FileUploaderComponent {
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>; 
 
   async onFileSelected(event: any) {
+    const allowedFormats = ['image/jpeg', 'image/png', 'image/gif', 'text/plain'];
     if (event.target.files.length + this.selectedFiles.length > 6) {
       SwalAlerts.showInfo('Maximum 6 files allowed.');
       event.target.value = null;
       return;
-    }
+    }   
 
     const files: File[] = Array.from(event.target.files);
     const validFiles: { file: File, name: string }[] = [];
 
     for (const file of files) {
       let finalFile = file;
+
+      if (!allowedFormats.includes(file.type)) {
+        SwalAlerts.showInfo('Invalid file format: ' + file.name);
+        event.target.value = null;
+        return;
+      }
+      
+      if (file.size === 0) 
+      {
+        SwalAlerts.showInfo('Empty file: ' + file.name);
+        event.target.value = null;
+        return
+      }
+
+      
       if (file.type.includes('text') && file.size > 1024 * 100) {      
         SwalAlerts.showInfo('Text files must be less than 100KB.');
         event.target.value = null;
