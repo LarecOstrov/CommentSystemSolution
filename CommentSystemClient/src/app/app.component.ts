@@ -190,6 +190,8 @@ export class AppComponent implements OnInit, OnDestroy  {
   
   onCommentAdded() {
     this.isCommentFormVisible = false; 
-    this.onSortChange({ field: 'createdAt', order: 'DESC' })
+    if (this.currentPage !== 1 || this.sortBy !== 'createdAt' || this.sortOrder !== 'DESC') {
+      this.onSortChange({ field: 'createdAt', order: 'DESC' })
+    }    
   }  
 }
