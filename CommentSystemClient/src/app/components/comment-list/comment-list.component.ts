@@ -41,8 +41,8 @@ export class CommentListComponent implements OnInit, OnDestroy {
     this.wsSubscription = this.wsService.newComment$
     .pipe(debounceTime(500))
     .subscribe((comment) => { 
-      if (comment && comment.parentId) {                  
-        this.addReplyToCommentTree(comment);        
+      if (comment && comment.parentId) {                        
+        this.addReplyToCommentTree(comment);               
       }
     });
   }
@@ -59,10 +59,13 @@ export class CommentListComponent implements OnInit, OnDestroy {
 
   addReplyToCommentTree(comment: Comment) {   
     const parentComment = this.findCommentById(comment.parentId, this.comments);
-
+    
     if (!parentComment) return;
 
-    if (!parentComment.replies.some(existingComment => existingComment.id === comment.id)) {   
+    const updatedParentComment = { ...parentComment, replies: [...(parentComment.replies || [])] };
+    
+    if (!updatedParentComment.replies.some(existingComment => existingComment.id === comment.id)) {   
+  
       let attachments: FileAttachment[] = [];  
       if (comment.fileAttachments) {
         if (Array.isArray(comment.fileAttachments)) {
@@ -88,22 +91,23 @@ export class CommentListComponent implements OnInit, OnDestroy {
         hasMoreReplies: false,
       };     
       
-      parentComment.replies = [newComment, ...parentComment.replies];
-      parentComment.hasReplies = true;
-      this.comments = [...this.comments];    
-
-      if (!this.isRepliesOpen(comment.parentId)) {
-        return;      
-      }  
+      updatedParentComment.replies = [newComment, ...updatedParentComment.replies];      
     }
 
+    updatedParentComment.hasReplies = true;
+      this.comments = this.comments.map(comment => 
+        comment.id === updatedParentComment.id ? updatedParentComment : comment
+      );    
+      
+    if (!this.isRepliesOpen(comment.parentId)) {
+      return;      
+    }  
+    
     this.highlightedComments = new Set([...this.highlightedComments, comment.id]);      
 
     setTimeout(() => {
-        this.highlightedComments.delete(comment.id);
-    }, 3000);
-  
-    this.comments = [...this.comments];
+        this.highlightedComments.delete(comment.id);              
+    }, 3000);   
   }
 
   toggleReplies(commentId: string) {
@@ -153,6 +157,7 @@ export class CommentListComponent implements OnInit, OnDestroy {
           after: afterCursor, 
           order: [{ createdAt: sortOrder }]
         },
+        fetchPolicy: 'network-only'
       }
     ).valueChanges.subscribe({
       next: ({ data }) => {
@@ -162,9 +167,8 @@ export class CommentListComponent implements OnInit, OnDestroy {
         if (!parentComment) return;
   
         const updatedParentComment = { ...parentComment };
-        if (!updatedParentComment.replies) {
-          updatedParentComment.replies = [];
-        }
+        
+        updatedParentComment.replies = [];        
   
         const newReplies = data.comments.nodes.filter(reply =>
           !updatedParentComment.replies?.some(existingReply => existingReply.id === reply.id)
@@ -180,7 +184,7 @@ export class CommentListComponent implements OnInit, OnDestroy {
         this.replyPagination.set(parentId, {
           afterCursor: data.comments.pageInfo.endCursor || null,
           hasMore: data.comments.pageInfo.hasNextPage,
-        });
+        });        
   
         this.isLoadingRepliesMap.set(parentId, false);
       },
@@ -220,7 +224,7 @@ export class CommentListComponent implements OnInit, OnDestroy {
       parentComment.replies = [];
     }
   
-    this.sortRepliesOrder = this.sortRepliesOrder === 'ASC' ? 'DESC' : 'ASC';
+    this.sortRepliesOrder = this.sortRepliesOrder === 'ASC' ? 'DESC' : 'ASC';    
   
     this.replyPagination.set(parentId, { afterCursor: null, hasMore: true });
   
@@ -232,6 +236,7 @@ export class CommentListComponent implements OnInit, OnDestroy {
   }
 
   findCommentById(commentId: string, comments: Comment[]): Comment | null {
+    if (!Array.isArray(comments)) return null;
     let stack = [...comments];
   
     while (stack.length) {
@@ -239,7 +244,7 @@ export class CommentListComponent implements OnInit, OnDestroy {
       if (!comment) continue;
   
       if (comment.id === commentId) {
-        return comment;
+        return { ...comment, replies: [...(comment.replies || [])] };
       }
   
       if (comment.replies && comment.replies.length > 0) {

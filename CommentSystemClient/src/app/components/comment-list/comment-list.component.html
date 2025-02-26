@@ -74,7 +74,7 @@
 
         <div *ngIf="isRepliesLoading(comment.id)" class="replies-loader"></div>
 
-        <div class="replies-pagination">
+        <div *ngIf="!isRepliesLoading(comment.id)" class="replies-pagination">
           <button *ngIf="replyPagination.get(comment.id)?.hasMore || (comment.replies && comment.replies.length > 25)" 
                   (click)="collapseReplies(comment.id)">
                   ✖

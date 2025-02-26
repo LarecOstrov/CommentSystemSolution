@@ -47,6 +47,8 @@ export class AppComponent implements OnInit, OnDestroy  {
     .subscribe((comment) => {
       if (comment?.parentId === null) {
         this.addCommentToCommentTree(comment);
+        this.apollo.client.cache.evict({ id: 'ROOT_QUERY', fieldName: 'comments' });  
+        this.apollo.client.cache.gc();
       }
     });
 
