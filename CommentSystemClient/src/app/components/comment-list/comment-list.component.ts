@@ -38,7 +38,6 @@ export class CommentListComponent implements OnInit, OnDestroy {
   constructor(private apollo: Apollo, private wsService: WebSocketService) {}
 
   ngOnInit() {
-    console.log('comments', this.comments);
     this.wsSubscription = this.wsService.newComment$
     .pipe(debounceTime(500))
     .subscribe((comment) => { 
@@ -64,7 +63,6 @@ export class CommentListComponent implements OnInit, OnDestroy {
     if (!parentComment) return;
 
     if (!parentComment.replies.some(existingComment => existingComment.id === comment.id)) {   
-      console.log('Adding reply:', comment.id, 'to parent:', parentComment.id);
       let attachments: FileAttachment[] = [];  
       if (comment.fileAttachments) {
         if (Array.isArray(comment.fileAttachments)) {
@@ -127,7 +125,6 @@ export class CommentListComponent implements OnInit, OnDestroy {
   }
   
   fetchReplies(parentId: string, afterCursor: string | null = null, sortOrder: 'DESC' | 'ASC' = 'DESC') {
-    console.log('fetchReplies', parentId, afterCursor, sortOrder);
     this.isLoadingRepliesMap.set(parentId, true);
   
     const GET_REPLIES = gql`
