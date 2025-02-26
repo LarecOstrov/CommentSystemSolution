@@ -11,6 +11,7 @@ import { SortingComponent } from './components/sorting/sorting.component';
 import { SkeletonLoaderComponent } from './components/skeleton-loader/skeleton-loader.component';
 import { Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
+import { SortingField } from './models/sorting-field.type';
 
 @Component({
   selector: 'app-root',
@@ -117,9 +118,18 @@ export class AppComponent implements OnInit, OnDestroy  {
       }
     `;
   
+    let sortingFields: SortingField[] = [];
+    if (this.sortBy === 'createdAt') {
+      sortingFields = [{ createdAt: this.sortOrder }];
+    } else if (this.sortBy === 'userName') {
+      sortingFields = [{ user: { userName: this.sortOrder } }, { createdAt: 'DESC' }];
+    } else if (this.sortBy === 'email') {
+      sortingFields = [{ user: { email: this.sortOrder } }, { createdAt: 'DESC' }];
+    }
+      
     const variables: any = {
-      sort: [{ createdAt: this.sortOrder }],
-      where: { parentId: { eq: null } },
+      sort: sortingFields,
+      where: { parentId: { eq: null } }
     };
   
     if (this.currentPage === 1) {
@@ -156,7 +166,7 @@ export class AppComponent implements OnInit, OnDestroy  {
       this.beforeCursor = data.comments.pageInfo.startCursor || null;
     });
   }
-  
+   
 
   onSortChange(event: { field: string, order: 'ASC' | 'DESC' }) {
     this.currentPage = 1;
@@ -180,5 +190,6 @@ export class AppComponent implements OnInit, OnDestroy  {
   
   onCommentAdded() {
     this.isCommentFormVisible = false; 
+    this.onSortChange({ field: 'createdAt', order: 'DESC' })
   }  
 }
