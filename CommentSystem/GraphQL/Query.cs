@@ -1,25 +1,33 @@
-﻿using CommentSystem.Models;
-using CommentSystem.Data;
-using CommentSystem.Services.Interfaces;
+﻿using Common.Models;
+using Common.Repositories.Interfaces;
+using HotChocolate.Data;
+using Serilog;
 
-namespace CommentSystem.GraphQL
+namespace Common.GraphQL;
+
+public class Query
 {
-    public class Query
-    {
-        private readonly ICommentService _commentService;
+    private readonly ICommentRepository _commentRepository;
 
-        public Query(ICommentService commentService)
+    public Query(ICommentRepository commentRepository)
+    {
+        _commentRepository = commentRepository;
+    }
+
+    [UsePaging(IncludeTotalCount = true, MaxPageSize = 25)]
+    [UseProjection]
+    [UseFiltering]
+    [UseSorting]
+    public IQueryable<Comment> GetComments()
+    {
+        try
         {
-            _commentService = commentService;
+            return _commentRepository.GetAll();
         }
-        
-        public async Task<List<Comment>> GetComments(
-            string? sortBy = null,
-            bool descending = true,
-            int page = 1,
-            int pageSize = 25)
+        catch (Exception ex)
         {
-            return await _commentService.GetAllCommentsWithSortingAndPaginationAsync(sortBy, descending, page, pageSize);
-        }        
+            Log.Error(ex.Message);
+            throw new GraphQLException($"Failed to get comments {ex.Message}");
+        }
     }
 }

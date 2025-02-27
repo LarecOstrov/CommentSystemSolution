@@ -1,0 +1,58 @@
+.skeleton-card {
+    margin-top: 10px;
+    min-width: 670px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #f3f3f3;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    animation: pulse 1.5s infinite;
+  }
+
+  @media (max-width: 768px) {    
+    .skeleton-card {
+      max-width: 475px;
+      min-width: 475px;
+    }   
+  }
+  
+  @media (max-width: 480px) {    
+    .skeleton-card {
+      min-width: 270px;
+      max-width: 270px;
+    }    
+  }
+  
+  .skeleton-avatar {
+    width: 40px;
+    height: 40px;
+    background: #e0e0e0;
+    border-radius: 50%;
+  }
+  
+  .skeleton-text {
+    width: 80%;
+    height: 12px;
+    background: #e0e0e0;
+    border-radius: 5px;
+  }
+  
+  .skeleton-text.small {
+    width: 40%;
+    height: 10px;
+  }
+  
+  .skeleton-reply {
+    width: 30%;
+    height: 10px;
+    background: #e0e0e0;
+    border-radius: 5px;
+  }
+  
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+  }

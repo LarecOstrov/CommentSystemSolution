@@ -1,0 +1,13 @@
+<div *ngIf="isLoadingCaptcha" class="loading">Loading captcha...</div>
+
+<div *ngIf="captchaImage && !isLoadingCaptcha" class="captcha-container">
+  <img [src]="captchaImage" alt="Captcha" />
+  <button type="button" (click)="requestCaptcha()">↻</button>
+  <input 
+    type="text" 
+    placeholder="Enter CAPTCHA" 
+    [class.invalid]="isCaptchaInvalid"
+    (input)="onCaptchaInput($event)" 
+    (focus)="handleCaptchaFocus()" 
+  />
+</div>

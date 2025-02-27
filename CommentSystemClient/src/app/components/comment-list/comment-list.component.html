@@ -1,0 +1,92 @@
+<div class="comments-container">
+  <div class="comment-stream">
+
+    <div *ngFor="let comment of comments; trackBy: trackByCommentId" class="comment-card"
+    [id]="'comment-' + comment.id"
+    [class.new-comment]="highlightedComments.has(comment.id)" clas>
+      <div class="comment-header">
+        <img src="assets/img/plugs/avatar.png" alt="Avatar" class="comment-avatar" />
+        <div>
+          <span><strong>{{ comment.user.userName}} </strong> {{ comment.user.email}}</span>
+          <span class="comment-date"> {{ comment.createdAt | date:'dd.MM.yy HH:mm' }}</span>
+        </div>
+      </div>
+      <p class="comment-text" [innerHTML]="comment.text | bbcode"></p>
+      
+      
+      <div *ngIf="comment.fileAttachments?.length && comment.fileAttachments.length > 0" class="attachments">
+        <div *ngIf="getImageAttachments(comment.fileAttachments)" class="image-slider">
+          <button class="slider-btn left" (click)="scrollImages(comment.id, 'left')">❮</button>
+          <div class="slider-container" #sliderRef [attr.data-comment-id]="comment.id">
+            <div class="image-wrapper" *ngFor="let image of getImageAttachments(comment.fileAttachments)">
+              <img [src]="image.url" alt="Attachment Image" />
+              <a [href]="image.url" target="_blank" download class="download-btn" title="Download">
+                ⇩
+              </a>
+            </div>
+          </div>
+          <button class="slider-btn right" (click)="scrollImages(comment.id, 'right')">❯</button>
+        </div>
+
+        <div class="text-files">
+          <div *ngFor="let file of getTextAttachments(comment.fileAttachments)" class="text-file">
+            <span alt="Text File" class="file-icon">📄</span>
+            <a [href]="file.url" target="_blank" download>{{ truncateFileName(file.url, 30) }}</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="comment-actions">
+        <div class="replies-buttons">
+          <button *ngIf="comment.hasReplies && !isRepliesOpen(comment.id)" 
+                  (click)="toggleReplies(comment.id)" 
+                  [class.active]="!isRepliesOpen(comment.id)">
+            Replies
+          </button>
+          <button *ngIf="isRepliesOpen(comment.id)" 
+                  (click)="toggleReplies(comment.id)">
+            ✖
+          </button>
+          <button *ngIf="isRepliesOpen(comment.id)" class="sortButton" [class.active]="sortBy === 'createdAt'" 
+          (click)="changeRepliesSortOrder(comment.id)">{{sortRepliesOrder === 'ASC' ? '⬆' : '⬇' }} Date
+        </button>  
+        </div>
+        <button class="reply-button" 
+                (click)="toggleReplyForm(comment.id)" 
+                [class.active]="!isReplyFormOpen(comment.id)">
+          {{ isReplyFormOpen(comment.id) ? '✖' : 'Reply' }}
+        </button>        
+              
+      </div>
+
+      <app-comment-form *ngIf="isReplyFormOpen(comment.id)"
+                        [parentId]="comment.id"
+                        (commentAdded)="onReplyAdded(comment.id)"
+                        (cancel)="toggleReplyForm(comment.id)">
+      </app-comment-form>
+
+      <div *ngIf="isRepliesOpen(comment.id)" class="replies-container">
+        
+        <app-comment-list *ngIf="!isRepliesLoading(comment.id)" 
+          [comments]="comment.replies"
+          [parentId]="comment.id"
+          [highlightedComments]="highlightedComments"></app-comment-list> 
+
+        <div *ngIf="isRepliesLoading(comment.id)" class="replies-loader"></div>
+
+        <div *ngIf="!isRepliesLoading(comment.id)" class="replies-pagination">
+          <button *ngIf="replyPagination.get(comment.id)?.hasMore || (comment.replies && comment.replies.length > 25)" 
+                  (click)="collapseReplies(comment.id)">
+                  ✖
+          </button>
+          <button *ngIf="replyPagination.get(comment.id)?.hasMore"
+                  (click)="loadMoreReplies(comment.id)">
+            More
+          </button>
+        </div>
+        
+      </div>
+      
+    </div>
+  </div>
+</div>

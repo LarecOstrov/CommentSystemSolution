@@ -1,0 +1,19 @@
+
+services:
+  app:
+    environment:
+      - DOTNET_USE_POLLING_FILE_WATCHER=1
+      - DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE=false
+    volumes:
+     - ~/.vsdbg:/root/.vsdbg:rw
+     - ./src:/app/src:cached
+    #command: tail -f /dev/null
+  
+
+  captcha:
+    environment:
+      - DOTNET_USE_POLLING_FILE_WATCHER=1
+    volumes:
+     - ~/.vsdbg:/root/.vsdbg:rw
+     - ./src:/app/src:cached
+    #command: tail -f /dev/null

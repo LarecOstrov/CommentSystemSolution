@@ -1,0 +1,7 @@
+{
+  "production": true,
+  "addCommentRest": "/api/comments/",
+  "getCommentsGraphQL": "/graphql",
+  "getCaptchaRest": "/captcha/generate",
+  "getWebSocket": "/ws"
+}
